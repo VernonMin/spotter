@@ -652,6 +652,14 @@
     const keywordsRaw = document.getElementById('keywords').value;
     const keywords = keywordsRaw.split(/[,\n]/).map(k => k.trim()).filter(Boolean);
 
+    if (keywords.length === 0) {
+      const el = document.getElementById('keywords');
+      el.style.borderColor = 'var(--error)';
+      el.placeholder = '请至少输入一个关键词';
+      setTimeout(() => { el.style.borderColor = ''; }, 1500);
+      return;
+    }
+
     // 过滤条件：空则使用默认值
     const filter = {
       maxAuthorFollowers: getFilterValue('f-followers', DEFAULTS.maxAuthorFollowers),
@@ -678,6 +686,13 @@
       headers: { 'Content-Type': 'application/json' },
       body,
     }).then(res => {
+      if (!res.ok) {
+        return res.json().then(err => {
+          document.getElementById('btn-scan').disabled = false;
+          document.getElementById('result-area').innerHTML =
+            `<div class="empty-state" style="color:var(--error)">❌ ${err.error ?? '请求失败'}</div>`;
+        });
+      }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buf = '';
