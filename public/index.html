@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spotter — 智能选品系统</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3e;
+      --accent: #6c63ff;
+      --accent-dim: #2d2a5e;
+      --text: #e2e4f0;
+      --text-muted: #7a7d94;
+      --success: #4ade80;
+      --warning: #facc15;
+      --error: #f87171;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    header .logo span { color: var(--accent); }
+    header .badge {
+      font-size: 11px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      height: calc(100vh - 57px);
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .form-section { margin-bottom: 20px; }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* 字段行 */
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+
+    .field-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .required-star { color: #f87171; font-size: 13px; line-height: 1; }
+    .default-badge {
+      margin-left: auto;
+      font-size: 10px;
+      background: #1e2030;
+      color: var(--text-muted);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .optional-tag {
+      font-size: 10px;
+      color: var(--text-muted);
+      background: #1e2030;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 9px 11px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .15s;
+      font-family: inherit;
+      width: 100%;
+    }
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus { border-color: var(--accent); }
+    .field input.required:focus { border-color: #818cf8; }
+    .field textarea { resize: vertical; min-height: 78px; line-height: 1.5; }
+    .field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a7d94' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; padding-right: 28px; cursor: pointer; }
+    .field select option { background: #1a1d27; }
+
+    .field .hint { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+    #category-hint { color: var(--accent); background: var(--accent-dim); padding: 5px 8px; border-radius: 6px; }
+
+    /* 过滤条件网格 */
+    .filter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .filter-item { display: flex; flex-direction: column; gap: 4px; }
+    .filter-item .filter-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .filter-item .filter-label .def { font-family: monospace; font-size: 10px; color: #4a4d64; }
+    .filter-item input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      padding: 7px 9px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color .15s;
+      width: 100%;
+    }
+    .filter-item input:focus { border-color: var(--accent); }
+
+    hr.divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 16px; }
+
+    .btn-scan {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-scan:hover:not(:disabled) { opacity: 0.88; }
+    .btn-scan:active:not(:disabled) { transform: scale(0.98); }
+    .btn-scan:disabled { opacity: 0.38; cursor: not-allowed; }
+
+    /* ── Main panel ── */
+    .main { display: flex; flex-direction: column; overflow: hidden; }
+
+    .progress-bar-wrap { height: 2px; background: var(--border); flex-shrink: 0; }
+    .progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width .35s ease; }
+
+    .log-panel {
+      padding: 16px 24px 0;
+      flex-shrink: 0;
+      display: none;
+    }
+    .log-panel-title { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .log-list { display: flex; flex-direction: column; gap: 3px; max-height: 140px; overflow-y: auto; }
+    .log-item {
+      font-size: 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      padding: 4px 8px;
+      border-radius: 5px;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .log-kw { color: var(--accent); font-weight: 600; min-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .log-step { color: var(--text-muted); flex: 1; }
+    .log-msg { font-size: 11px; }
+    .s-done { color: var(--success); }
+    .s-error { color: var(--error); }
+    .s-skipped { color: var(--warning); }
+    .s-running { color: var(--text-muted); animation: blink 1.1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    /* 进度详情通用容器 */
+    .detail-box {
+      background: #12151f;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 12px;
+      margin: 4px 0 2px;
+      font-size: 12px;
+    }
+    .detail-box .db-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .db-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .db-cell { flex: 1; min-width: 80px; }
+    .db-label { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; }
+    .db-value { font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace; }
+    .db-value.good { color: var(--success); }
+    .db-value.warn { color: var(--warning); }
+
+    /* 竞品列表 */
+    .db-products { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+    .db-product {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border-radius: 5px;
+      padding: 5px 8px;
+      font-size: 11px;
+    }
+    .db-product .prod-title { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .db-product .prod-price { color: var(--success); font-weight: 600; min-width: 42px; text-align: right; }
+    .db-product .prod-rating { color: var(--warning); min-width: 28px; }
+    .db-product .prod-reviews { color: var(--text-muted); min-width: 44px; text-align: right; }
+
+    /* 资金分配（原 finance-breakdown） */
+    .finance-breakdown {
+      background: #12151f;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 10px 12px;
+      margin: 4px 0 2px;
+    }
+    .fb-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fb-cell { flex: 1; min-width: 80px; }
+    .fb-label { font-size: 10px; color: var(--text-muted); margin-bottom: 2px; }
+    .fb-value { font-size: 13px; font-weight: 600; font-family: 'SF Mono', monospace; }
+    .fb-warning {
+      margin-top: 7px;
+      font-size: 11px;
+      color: var(--warning);
+      background: #2a1f00;
+      border-radius: 5px;
+      padding: 5px 8px;
+      line-height: 1.5;
+    }
+
+    /* ── Result area ── */
+    .result-area { flex: 1; overflow-y: auto; padding: 20px 24px 28px; }
+
+    .empty-state {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 44px; opacity: .25; }
+
+    /* 结果卡片 */
+    .report-header { margin-bottom: 16px; }
+    .report-header h2 { font-size: 17px; }
+    .report-header p { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+    .product-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .card-header h3 { font-size: 15px; flex: 1; min-width: 0; }
+    .sr-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: var(--accent-dim); color: var(--accent); white-space: nowrap; }
+    .risk-badge { font-size: 11px; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+    .risk-high { background: #3b1a1a; color: var(--error); }
+    .risk-ok { background: #1a3b2a; color: var(--success); }
+
+    /* 推荐等级 */
+    .rec-banner {
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .rec-banner.strong  { background: #1a2a0a; border: 1px solid #3a5a1a; }
+    .rec-banner.consider { background: #1a2030; border: 1px solid #2a4060; }
+    .rec-banner.caution  { background: #2a2000; border: 1px solid #5a4a00; }
+    .rec-banner.avoid    { background: #2a0a0a; border: 1px solid #5a1a1a; }
+    .rec-icon { font-size: 22px; line-height: 1; flex-shrink: 0; }
+    .rec-body { flex: 1; }
+    .rec-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    .strong  .rec-label { color: #86efac; }
+    .consider .rec-label { color: #93c5fd; }
+    .caution  .rec-label { color: #fde047; }
+    .avoid    .rec-label { color: #fca5a5; }
+    .rec-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+    .strong  .rec-title { color: #bbf7d0; }
+    .consider .rec-title { color: #bfdbfe; }
+    .caution  .rec-title { color: #fef08a; }
+    .avoid    .rec-title { color: #fecaca; }
+    .rec-reason { font-size: 12px; line-height: 1.5; }
+    .strong  .rec-reason { color: #86efac99; }
+    .consider .rec-reason { color: #93c5fd99; }
+    .caution  .rec-reason { color: #fde04799; }
+    .avoid    .rec-reason { color: #fca5a599; }
+    .rec-sr { font-size: 11px; font-family: monospace; opacity: .5; margin-top: 4px; }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .metric { background: var(--bg); border-radius: 7px; padding: 9px 11px; }
+    .metric .m-label { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
+    .metric .m-value { font-size: 17px; font-weight: 700; }
+
+    .finance-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .finance-item { flex: 1; background: var(--bg); border-radius: 7px; padding: 9px 10px; text-align: center; }
+    .finance-item .f-label { font-size: 10px; color: var(--text-muted); margin-bottom: 3px; }
+    .finance-item .f-value { font-size: 14px; font-weight: 600; }
+
+    .warning-box {
+      background: #2a1f00;
+      border: 1px solid #5a4200;
+      border-radius: 7px;
+      padding: 9px 12px;
+      font-size: 12px;
+      color: var(--warning);
+      margin-bottom: 10px;
+    }
+
+    .ai-box {
+      background: #13162a;
+      border: 1px solid var(--accent-dim);
+      border-radius: 8px;
+      padding: 13px 15px;
+    }
+    .ai-box-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 9px; }
+    .ai-summary { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .ai-text { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 6px; }
+    .risk-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .risk-tag { font-size: 11px; background: #2a1a1a; color: var(--error); padding: 2px 8px; border-radius: 20px; }
+
+    .no-result {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      text-align: center;
+    }
+    .no-result strong { color: var(--warning); display: block; margin-bottom: 6px; font-size: 14px; }
+    .no-result p { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span>Spotter</span></div>
+  <span class="badge">智能选品</span>
+</header>
+
+<div class="layout">
+
+  <!-- ── 左侧表单 ── -->
+  <div class="sidebar">
+
+    <!-- 社交媒体选择 -->
+    <div class="form-section">
+      <div class="section-label">数据来源</div>
+      <div class="field">
+        <div class="field-label">社交媒体平台</div>
+        <select id="platform">
+          <option value="tiktok">TikTok</option>
+          <!-- 后续扩展：Instagram / YouTube / 小红书 -->
+        </select>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- 扫描参数 -->
+    <div class="form-section">
+      <div class="section-label">扫描参数</div>
+
+      <div class="field">
+        <div class="field-label">
+          总预算 (USD)
+          <span class="required-star">*</span>
+        </div>
+        <input id="budget" type="number" min="100" placeholder="例：5000" class="required" />
+      </div>
+
+      <div class="field">
+        <div class="field-label">
+          品类
+          <span class="optional-tag">可选</span>
+        </div>
+        <select id="category" onchange="onCategoryChange()">
+          <option value="">不限品类</option>
+          <option value="家居用品">🏠 家居用品</option>
+          <option value="美妆个护">💄 美妆个护</option>
+          <option value="健康保健">💪 健康保健</option>
+          <option value="宠物用品">🐾 宠物用品</option>
+          <option value="运动户外">🏃 运动户外</option>
+          <option value="母婴用品">🍼 母婴用品</option>
+          <option value="电子配件">🔌 电子配件</option>
+          <option value="办公文具">🖊️ 办公文具</option>
+          <option value="服装配饰">👗 服装配饰</option>
+          <option value="custom">✏️ 自定义品类...</option>
+        </select>
+        <input id="category-custom" type="text" placeholder="输入自定义品类名" style="display:none; margin-top:6px;" />
+        <span class="hint" id="category-hint" style="display:none;"></span>
+      </div>
+
+      <div class="field">
+        <div class="field-label">
+          关键词（Amazon 英文搜索词）
+          <span class="optional-tag">逗号或换行分隔</span>
+        </div>
+        <textarea id="keywords" placeholder="选择品类可自动填入推荐关键词，也可手动输入"></textarea>
+        <span class="hint">⚠️ 请填英文词 — 系统会用它同时搜索 TikTok 视频信号和 Amazon 竞争数据。</span>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- 过滤条件 -->
+    <div class="form-section">
+      <div class="section-label">TikTok 过滤条件</div>
+      <div class="filter-grid">
+        <div class="filter-item">
+          <div class="filter-label">
+            最大粉丝数
+            <span class="def">默认 100,000</span>
+          </div>
+          <input id="f-followers" type="number" placeholder="100000" />
+        </div>
+        <div class="filter-item">
+          <div class="filter-label">
+            最低播放量
+            <span class="def">默认 100,000</span>
+          </div>
+          <input id="f-plays" type="number" placeholder="100000" />
+        </div>
+        <div class="filter-item">
+          <div class="filter-label">
+            最低互动率 (%)
+            <span class="def">默认 3%</span>
+          </div>
+          <input id="f-engagement" type="number" placeholder="3" step="0.1" min="0" max="100" />
+        </div>
+        <div class="filter-item">
+          <div class="filter-label">
+            时间窗口 (天)
+            <span class="def">默认 7 天</span>
+          </div>
+          <input id="f-days" type="number" placeholder="7" min="1" max="180" />
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-scan" id="btn-scan" onclick="startScan()">开始扫描</button>
+
+  </div>
+
+  <!-- ── 右侧结果 ── -->
+  <div class="main">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <div class="log-panel" id="log-panel">
+      <div class="log-panel-title">扫描进度</div>
+      <div class="log-list" id="log-list"></div>
+    </div>
+
+    <div class="result-area" id="result-area">
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <div>填写预算和关键词后点击「开始扫描」</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // 品类 → 推荐关键词（英文，适合 TikTok + Amazon 搜索）
+  const CATEGORY_KEYWORDS = {
+    '家居用品': [
+      'portable blender',
+      'air fryer accessories',
+      'kitchen organizer',
+      'self stirring mug',
+      'collapsible colander',
+    ],
+    '美妆个护': [
+      'gua sha stone',
+      'face roller',
+      'hair claw clip',
+      'nail art kit',
+      'pimple patch',
+    ],
+    '健康保健': [
+      'posture corrector',
+      'massage gun',
+      'resistance bands',
+      'acupressure mat',
+      'cold therapy wrap',
+    ],
+    '宠物用品': [
+      'cat water fountain',
+      'dog puzzle toy',
+      'pet camera',
+      'cat scratcher',
+      'dog snuffle mat',
+    ],
+    '运动户外': [
+      'yoga mat',
+      'jump rope',
+      'foam roller',
+      'pull up bar',
+      'workout gloves',
+    ],
+    '母婴用品': [
+      'baby monitor',
+      'diaper bag backpack',
+      'baby carrier wrap',
+      'toddler utensils',
+      'white noise machine',
+    ],
+    '电子配件': [
+      'phone ring holder',
+      'laptop stand',
+      'cable organizer',
+      'wireless charger pad',
+      'screen cleaning kit',
+    ],
+    '办公文具': [
+      'desk organizer',
+      'sticky note dispenser',
+      'ergonomic wrist rest',
+      'monitor light bar',
+      'cable management box',
+    ],
+    '服装配饰': [
+      'seamless underwear',
+      'shapewear bodysuit',
+      'bralette',
+      'high waist leggings',
+      'satin pajama set',
+    ],
+  };
+
+  function onCategoryChange() {
+    const sel = document.getElementById('category').value;
+    const customInput = document.getElementById('category-custom');
+    const hint = document.getElementById('category-hint');
+    const keywordsEl = document.getElementById('keywords');
+
+    // 显示/隐藏自定义输入框
+    customInput.style.display = sel === 'custom' ? 'block' : 'none';
+
+    if (sel === '' || sel === 'custom') {
+      hint.style.display = 'none';
+      return;
+    }
+
+    const kws = CATEGORY_KEYWORDS[sel] ?? [];
+    if (kws.length === 0) return;
+
+    // 自动填入关键词
+    keywordsEl.value = kws.join(', ');
+
+    // 提示文字：展示中英文对照
+    const labels = {
+      '家居用品': ['便携榨汁机','空气炸锅配件','厨房收纳','自搅拌杯','折叠滤网'],
+      '美妆个护': ['刮痧板','脸部滚轮','抓夹','美甲套装','痘贴'],
+      '健康保健': ['驼背矫正器','筋膜枪','弹力带','针灸垫','冷敷绷带'],
+      '宠物用品': ['猫咪饮水机','狗狗益智玩具','宠物摄像头','猫抓板','嗅闻垫'],
+      '运动户外': ['瑜伽垫','跳绳','泡沫轴','单杠','健身手套'],
+      '母婴用品': ['婴儿监视器','妈咪包','背巾','儿童餐具','白噪音机'],
+      '电子配件': ['手机支架环','笔记本支架','理线器','无线充电板','屏幕清洁套装'],
+      '办公文具': ['桌面收纳','便利贴座','护腕垫','显示器挂灯','线缆收纳盒'],
+      '服装配饰': ['无缝内衣','塑身连体衣','无钢圈内衣','高腰打底裤','缎面睡衣套装'],
+    };
+    const cnLabels = labels[sel] ?? [];
+    const pairs = kws.map((k, i) => `${k}（${cnLabels[i] ?? ''}）`).join('、');
+    hint.textContent = `已填入 ${kws.length} 个推荐词：${pairs}`;
+    hint.style.display = 'block';
+  }
+
+  // 读取品类值（兼容自定义）
+  function getCategoryValue() {
+    const sel = document.getElementById('category').value;
+    if (sel === 'custom') return document.getElementById('category-custom').value.trim();
+    return sel;
+  }
+
+  // 默认值常量（与后端 DEFAULT_FILTER 保持一致）
+  const DEFAULTS = {
+    maxAuthorFollowers: 100000,
+    minPlayCount: 100000,
+    minEngagementRate: 3,     // 页面单位 %，后端换算 /100
+    publishTimeDays: 7,
+  };
+
+  let totalKeywords = 0;
+  let doneKeywords = 0;
+
+  function getFilterValue(id, defaultVal) {
+    const el = document.getElementById(id);
+    const v = el.value.trim();
+    return v === '' ? defaultVal : Number(v);
+  }
+
+  function startScan() {
+    const budget = document.getElementById('budget').value.trim();
+    if (!budget) {
+      document.getElementById('budget').focus();
+      document.getElementById('budget').style.borderColor = 'var(--error)';
+      setTimeout(() => document.getElementById('budget').style.borderColor = '', 1500);
+      return;
+    }
+
+    const platform = document.getElementById('platform').value;
+    const category = getCategoryValue();
+    const keywordsRaw = document.getElementById('keywords').value;
+    const keywords = keywordsRaw.split(/[,\n]/).map(k => k.trim()).filter(Boolean);
+
+    // 过滤条件：空则使用默认值
+    const filter = {
+      maxAuthorFollowers: getFilterValue('f-followers', DEFAULTS.maxAuthorFollowers),
+      minPlayCount: getFilterValue('f-plays', DEFAULTS.minPlayCount),
+      minEngagementRate: getFilterValue('f-engagement', DEFAULTS.minEngagementRate) / 100,
+      publishTimeDays: getFilterValue('f-days', DEFAULTS.publishTimeDays),
+    };
+
+    totalKeywords = keywords.length;
+    doneKeywords = 0;
+
+    // 重置 UI
+    document.getElementById('btn-scan').disabled = true;
+    document.getElementById('progress-bar').style.width = '4%';
+    document.getElementById('log-panel').style.display = 'block';
+    document.getElementById('log-list').innerHTML = '';
+    document.getElementById('result-area').innerHTML =
+      '<div class="empty-state"><div style="color:var(--text-muted);font-size:13px;">扫描中，请稍候...</div></div>';
+
+    const body = JSON.stringify({ totalBudget: Number(budget), platform, category: category || undefined, keywords, filter });
+
+    fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    }).then(res => {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      function pump() {
+        reader.read().then(({ done, value }) => {
+          if (done) { document.getElementById('btn-scan').disabled = false; return; }
+          buf += decoder.decode(value, { stream: true });
+          const parts = buf.split('\n\n');
+          buf = parts.pop() ?? '';
+          parts.forEach(part => {
+            let event = '', data = '';
+            part.split('\n').forEach(l => {
+              if (l.startsWith('event: ')) event = l.slice(7);
+              if (l.startsWith('data: ')) data = l.slice(6);
+            });
+            if (event && data) handleSSE(event, JSON.parse(data));
+          });
+          pump();
+        });
+      }
+      pump();
+    }).catch(err => {
+      document.getElementById('btn-scan').disabled = false;
+      document.getElementById('result-area').innerHTML =
+        `<div class="empty-state" style="color:var(--error)">请求失败：${err}</div>`;
+    });
+  }
+
+  function handleSSE(event, data) {
+    if (event === 'progress') {
+      addLog(data);
+      const terminal = (data.status === 'done' && data.step === 4) ||
+                       (data.status === 'skipped' && data.step === 1) ||
+                       (data.status === 'error');
+      if (terminal) { doneKeywords++; updateProgress(); }
+    }
+    if (event === 'done') {
+      document.getElementById('progress-bar').style.width = '100%';
+      renderResults(data);
+      document.getElementById('btn-scan').disabled = false;
+    }
+    if (event === 'error') {
+      document.getElementById('result-area').innerHTML =
+        `<div class="empty-state" style="color:var(--error)">错误：${data.message}</div>`;
+      document.getElementById('btn-scan').disabled = false;
+    }
+  }
+
+  function updateProgress() {
+    const pct = 4 + Math.round((doneKeywords / Math.max(totalKeywords, 1)) * 92);
+    document.getElementById('progress-bar').style.width = pct + '%';
+  }
+
+  function addLog({ keyword, step, stepName, status, message, tiktokDetail, amazonDetail, financial }) {
+    const list = document.getElementById('log-list');
+    const id = `log-${keyword.replace(/\W+/g, '-')}-${step}`;
+    let el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = id;
+      list.appendChild(el);
+    }
+
+    const icon = { done:'✓', error:'✗', skipped:'−', running:'…' }[status] ?? '?';
+    const headerLine = `<div class="log-item"><span class="log-kw">${keyword}</span><span class="log-step">[${step}/4] ${stepName}</span><span class="log-msg s-${status}">${icon}${message ? ' ' + message : ''}</span></div>`;
+
+    // Step 1 完成：TikTok 抓取详情
+    if (step === 1 && status === 'done' && tiktokDetail) {
+      const d = tiktokDetail;
+      const daysAgo = Math.round((Date.now() - new Date(d.publishedAt).getTime()) / 86400000);
+      el.innerHTML = headerLine + `
+        <div class="detail-box">
+          <div class="db-title">TikTok 最优信号</div>
+          <div class="db-row">
+            <div class="db-cell"><div class="db-label">播放量</div><div class="db-value">${fmtNum(d.playCount)}</div></div>
+            <div class="db-cell"><div class="db-label">点赞数</div><div class="db-value">${fmtNum(d.diggCount)}</div></div>
+            <div class="db-cell"><div class="db-label">互动率</div><div class="db-value ${d.engagementRate >= 0.05 ? 'good' : ''}">${(d.engagementRate*100).toFixed(1)}%</div></div>
+            <div class="db-cell"><div class="db-label">爆发倍数</div><div class="db-value good">${d.momentumMultiplier}x</div></div>
+            <div class="db-cell"><div class="db-label">作者粉丝</div><div class="db-value">${fmtNum(d.authorFollowers)}</div></div>
+            <div class="db-cell"><div class="db-label">发布时间</div><div class="db-value">${daysAgo} 天前</div></div>
+          </div>
+        </div>`;
+
+    // Step 2 完成：Amazon 竞争详情
+    } else if (step === 2 && status === 'done' && amazonDetail) {
+      const d = amazonDetail;
+      const ratingCls = d.avgRating < 4.2 ? 'warn' : 'good';
+      const satCls = d.saturationIndex > 3 ? 'warn' : 'good';
+      const productsHtml = d.topProducts.map(p => `
+        <div class="db-product">
+          <span class="prod-title">${p.title}</span>
+          <span class="prod-rating">★${p.rating}</span>
+          <span class="prod-reviews">${fmtNum(p.reviewCount)}评</span>
+          <span class="prod-price">$${p.price}</span>
+        </div>`).join('');
+      el.innerHTML = headerLine + `
+        <div class="detail-box">
+          <div class="db-title">Amazon 市场概况</div>
+          <div class="db-row">
+            <div class="db-cell"><div class="db-label">搜索结果</div><div class="db-value">${fmtNum(d.searchResults)}</div></div>
+            <div class="db-cell"><div class="db-label">饱和度</div><div class="db-value ${satCls}">${d.saturationIndex.toFixed(2)}</div></div>
+            <div class="db-cell"><div class="db-label">竞品均分</div><div class="db-value ${ratingCls}">${d.avgRating.toFixed(1)} / 5.0${d.avgRating < 4.2 ? ' ⚠' : ''}</div></div>
+          </div>
+          <div class="db-title" style="margin-top:4px;">竞品 Top ${d.topProducts.length}</div>
+          <div class="db-products">${productsHtml}</div>
+          ${d.avgRating < 4.2 ? '<div class="fb-warning" style="margin-top:6px;">均分低于 4.2，AI 将自动提炼竞品负面痛点</div>' : ''}
+        </div>`;
+
+    // Step 3 完成：资金分配详情
+    } else if (step === 3 && status === 'done' && financial) {
+      const riskColor = financial.capitalRiskFlag ? 'var(--error)' : 'var(--success)';
+      const riskLabel = financial.capitalRiskFlag ? '⚠ 风险极高' : '✓ 风险可控';
+      el.innerHTML = headerLine + `
+        <div class="finance-breakdown">
+          <div class="fb-row">
+            <div class="fb-cell"><div class="fb-label">采购 40%</div><div class="fb-value">$${financial.procurementBudget.toFixed(0)}</div></div>
+            <div class="fb-cell"><div class="fb-label">营销 30%</div><div class="fb-value">$${financial.marketingBudget.toFixed(0)}</div></div>
+            <div class="fb-cell"><div class="fb-label">备用金 30%</div><div class="fb-value">$${financial.reserveBudget.toFixed(0)}</div></div>
+            <div class="fb-cell"><div class="fb-label">建议采购量</div><div class="fb-value">${financial.suggestedOrderQty} 件</div></div>
+            <div class="fb-cell"><div class="fb-label">资金风险</div><div class="fb-value" style="color:${riskColor}">${riskLabel}</div></div>
+          </div>
+          ${financial.capitalRiskFlag && financial.capitalRiskReason ? `<div class="fb-warning">${financial.capitalRiskReason}</div>` : ''}
+        </div>`;
+
+    // 其他步骤或状态：普通单行
+    } else {
+      el.innerHTML = headerLine;
+    }
+
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function fmtNum(n) {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
+    return String(n);
+  }
+
+  function renderResults({ products, report, message }) {
+    const area = document.getElementById('result-area');
+
+    if (!products || products.length === 0) {
+      area.innerHTML = `
+        <div class="no-result">
+          <strong>⚠️ 未找到符合条件的选品</strong>
+          <p>${message ?? ''}<br/>建议：降低最低互动率、扩大时间窗口，或提高粉丝数上限。</p>
+        </div>`;
+      return;
+    }
+
+    let html = `<div class="report-header">
+      <h2>扫描结果 · ${products.length} 个选品</h2>
+      <p>按 Spotter Rank 降序排列 · ${new Date().toLocaleString('zh-CN')}</p>
+    </div>`;
+
+    const REC_ICON = { strong:'🟢', consider:'🔵', caution:'🟡', avoid:'🔴' };
+
+    products.forEach((p, i) => {
+      const riskCls = p.financial.capitalRiskFlag ? 'risk-high' : 'risk-ok';
+      const riskTxt = p.financial.capitalRiskFlag ? '⚠ 资金风险极高' : '✓ 风险可控';
+      const rec = p.recommendation;
+      const recIcon = REC_ICON[rec.level] ?? '⚪';
+
+      html += `
+      <div class="product-card">
+        <div class="card-header">
+          <h3>#${i+1}  ${p.keyword}</h3>
+          <span class="sr-badge">SR ${p.score.sr.toFixed(3)}</span>
+          <span class="risk-badge ${riskCls}">${riskTxt}</span>
+        </div>
+
+        <div class="rec-banner ${rec.level}">
+          <div class="rec-icon">${recIcon}</div>
+          <div class="rec-body">
+            <div class="rec-label">${rec.label}</div>
+            <div class="rec-title">${rec.title}</div>
+            <div class="rec-reason">${rec.reason}</div>
+            <div class="rec-sr">SR ${p.score.sr.toFixed(3)} · 爆发 ${p.score.momentumComponent.toFixed(3)} · 竞争 ${p.score.saturationComponent.toFixed(3)} · 机会 ${p.score.opportunityComponent.toFixed(3)}</div>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric"><div class="m-label">爆发倍数</div><div class="m-value">${p.tiktok.momentumMultiplier}x</div></div>
+          <div class="metric"><div class="m-label">互动率</div><div class="m-value">${(p.tiktok.engagementRate*100).toFixed(1)}%</div></div>
+          <div class="metric"><div class="m-label">Amazon 搜索量</div><div class="m-value">${(p.amazon.searchResults/1000).toFixed(0)}k</div></div>
+          <div class="metric"><div class="m-label">竞品均分</div><div class="m-value">${p.amazon.avgRating.toFixed(1)}</div></div>
+        </div>
+
+        <div class="finance-row">
+          <div class="finance-item"><div class="f-label">采购 40%</div><div class="f-value">$${p.financial.procurementBudget.toFixed(0)}</div></div>
+          <div class="finance-item"><div class="f-label">营销 30%</div><div class="f-value">$${p.financial.marketingBudget.toFixed(0)}</div></div>
+          <div class="finance-item"><div class="f-label">备用金 30%</div><div class="f-value">$${p.financial.reserveBudget.toFixed(0)}</div></div>
+          <div class="finance-item"><div class="f-label">建议采购量</div><div class="f-value">${p.financial.suggestedOrderQty} 件</div></div>
+        </div>
+
+        ${p.financial.capitalRiskFlag ? `<div class="warning-box">⚠️ ${p.financial.capitalRiskReason}</div>` : ''}
+
+        ${p.aiInsight ? `
+        <div class="ai-box">
+          <div class="ai-box-title">AI 决策卡片 · DeepSeek-V3</div>
+          <div class="ai-summary">${p.aiInsight.summary}</div>
+          <div class="ai-text">${p.aiInsight.differentiationStrategy}</div>
+          <div class="ai-text">${p.aiInsight.actionPlan}</div>
+          ${p.aiInsight.keyRisks?.length ? `<div class="risk-tags">${p.aiInsight.keyRisks.map(r=>`<span class="risk-tag">${r}</span>`).join('')}</div>` : ''}
+        </div>` : ''}
+      </div>`;
+    });
+
+    area.innerHTML = html;
+  }
+</script>
+
+</body>
+</html>
