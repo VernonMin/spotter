@@ -167,20 +167,27 @@ if (落地成本 × 300 > 采购预算) → 标记「资金风险极高」
 
 步骤 2 是关键：真正的商品视频会在文案/标签里提及商品词，而借势蹭热度的生活类视频不会。
 
-#### 商业意图信号词表
-使用具体词组，避免 `shop`/`link` 等过于泛化的单词误判：
+#### 商业意图信号词表及入选原因
 
-```
-review / haul / unboxing
-tiktokshop / shopwithme / amazonfinds / amazonhaul
-tryon / tryonhaul / try on haul
-sponsored / affiliate
-honest review / product review
-recommend / must have / worth it
-amazon find / amazon product
-```
+信号词要满足：**在商品内容中高频出现，在纯生活/娱乐内容中低频出现**。
 
-**背景**：TikTok 关键词搜索返回所有含该词的视频，不区分商业意图。生活类视频可能因带有泛化商业标签而绕过简单过滤，双重检查可有效排除此类内容。
+| 信号词 | 为什么可以作为信号词 | 被排除的相似词及原因 |
+|--------|-------------------|------------------|
+| `review` | 专门评测商品的行为，生活类视频极少使用 | — |
+| `haul` | 购物战利品展示，100% 商品内容 | — |
+| `unboxing` | 拆箱开箱，必然是商品 | `unbox` 单词偶尔出现在非商品语境 |
+| `tiktokshop` | TikTok 官方购物平台标签，平台层面确认商业 | `shop` 太泛：#shop 被大量生活类创作者用于涨流量 |
+| `shopwithme` | "陪我购物"系列，固定购物内容格式 | — |
+| `amazonfinds` / `amazonhaul` | 明确指向 Amazon 商品的专属标签 | `amazon` 单词可能出现在"amazon jungle"等无关语境 |
+| `tryon` / `tryonhaul` | 试穿/试用系列，直接展示商品上身效果 | — |
+| `sponsored` | 付费商业合作，平台要求标注 | `ad` 太泛：很多视频无关广告也带 #ad |
+| `affiliate` | 联盟营销链接，必然关联商品销售 | — |
+| `honest review` / `product review` | 明确的评测声明，强商业意图 | — |
+| `recommend` | 主动向观众推荐，高购买转化意图 | — |
+| `must have` / `worth it` | 购买价值判断语，典型的选品内容话术 | — |
+| `amazon find` / `amazon product` | 明确指向 Amazon 商品发现 | — |
+
+**被故意排除的高风险词**：`shop`、`buy`、`link`、`deal`、`sale`、`ad`、`code`、`discount`——这些词虽然看起来商业，但在 TikTok 上被普遍滥用于生活类内容。
 
 #### 所有条件均可在页面上覆盖
 用户在前端输入框填写即覆盖默认值，不填则使用默认值。requireCommercialSignal 在页面以勾选框形式展示，默认勾选。
