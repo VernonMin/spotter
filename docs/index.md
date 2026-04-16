@@ -29,6 +29,8 @@
 | `publishedAt` | 进度·发布时间（x 天前） | `new Date(create_time × 1000).toISOString()`，页面展示：`floor((now - publishedAt) / 86400000)` 天 |
 | `videoUrl` | 进度·查看视频 / 结果·封面链接 | API 原始值：`share_url` |
 | `coverUrl` | 进度·封面图 / 结果·封面图 | API 原始值：`video.cover.url_list[0]` |
+| `videoDesc` | 不直接展示，传给 AI | API 原始值：`desc`（视频文案） |
+| `hashtags` | 不直接展示，传给 AI | API 原始值：`text_extra[].hashtag_name` 过滤空值后组成数组 |
 
 ---
 
@@ -84,6 +86,20 @@
 
 ---
 
+## 6. AI 决策卡片字段
+
+**来源文件**：`src/ai/InsightEngine.ts`
+
+| 字段名 | 展示位置 | 计算公式 |
+|--------|---------|---------|
+| `aiInsight.viralFeature` | 结果·AI卡片·爆发功能点 | DeepSeek-V3 综合 `videoDesc` + `hashtags` + Top5 竞品标题推断，50字以内 |
+| `aiInsight.summary` | 结果·AI卡片·摘要 | DeepSeek-V3 生成，50字以内一句话总结 |
+| `aiInsight.differentiationStrategy` | 结果·AI卡片·差异化策略 | DeepSeek-V3 生成，100字以内 |
+| `aiInsight.actionPlan` | 结果·AI卡片·行动建议 | DeepSeek-V3 生成，150字以内，含选品/定价/营销方向 |
+| `aiInsight.keyRisks` | 结果·AI卡片·风险标签 | DeepSeek-V3 生成，3条风险词组成数组 |
+
+---
+
 ## 5. 资金适配字段
 
 **来源文件**：`src/core/FinancialEngine.ts`
@@ -120,3 +136,4 @@
 | 日期 | 字段 | 变更内容 |
 |------|------|---------|
 | 2026-04-17 | 全部 | 初始版本，梳理页面所有字段及完整计算公式 |
+| 2026-04-17 | TikTok信号 / AI卡片 | 新增 videoDesc、hashtags 字段；新增第6节 AI 决策卡片字段（含 viralFeature） |

@@ -16,6 +16,8 @@ export interface TikTokSignal {
   momentumMultiplier: number;
   videoUrl?: string;   // TikTok 视频链接
   coverUrl?: string;   // 视频封面图（有效期约 24h）
+  videoDesc?: string;  // 视频文案（创作者描述）
+  hashtags?: string[]; // 视频标签列表
 }
 
 export interface AmazonMetrics {
@@ -85,6 +87,7 @@ export interface StandardProduct {
 }
 
 export interface AIInsight {
+  viralFeature: string;            // 爆发功能点：一句话说明该品为何爆发
   differentiationStrategy: string;
   keyRisks: string[];
   actionPlan: string;

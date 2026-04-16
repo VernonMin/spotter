@@ -168,10 +168,49 @@ GET /api/v1/tiktok/app/v3/fetch_video_search_result
 |------|------|
 | videoUrl | TikTok 视频分享链接（share_url） |
 | coverUrl | 视频封面图（有效期约 24 小时，仅用于展示） |
+| videoDesc | 视频文案（desc），创作者描述，用于 AI 提炼爆发功能点 |
+| hashtags | 视频标签列表（text_extra[].hashtag_name），用于 AI 提炼爆发功能点 |
 
 ---
 
-## 4. Amazon 市场验证
+## 4. 爆发功能点识别
+
+**文件**：`src/ai/InsightEngine.ts`
+
+### 当前版本：v1（2026-04-17）
+
+#### 背景
+
+TikTok 爆发的往往不是品类本身，而是某个具体的功能角度（如杯子因「自动搅拌」爆发，而非「杯子」这个品类）。原有 AI 卡片无法回答"为什么爆"。
+
+#### 信号来源（方案 A + B）
+
+| 来源 | 字段 | 说明 |
+|------|------|------|
+| TikTok 视频文案 | `videoDesc`（API: `desc`） | 创作者直接描述卖点，信号最强 |
+| TikTok 视频标签 | `hashtags`（API: `text_extra[].hashtag_name`） | 标签常包含功能词，如 `#selfstirringcup` |
+| Amazon 竞品标题 | `topProducts[0..4].title` | 卖家经过优化的标题，功能词在前 |
+
+#### AI 提炼逻辑
+
+将以上三类信号拼入 prompt，要求 DeepSeek-V3 输出：
+```
+viralFeature：一句话，50字以内，说明该产品为什么会在 TikTok 爆发，核心是哪个功能或卖点触发了传播
+```
+
+#### 输出字段
+
+| 字段 | 位置 | 说明 |
+|------|------|------|
+| `aiInsight.viralFeature` | 结果卡片·AI决策卡片·爆发功能点 | AI 综合三路信号推断的爆发原因，一句话 |
+
+#### 降级处理
+- 若 TikHub 未返回 `desc` 或 `text_extra`，则只使用 Amazon 竞品标题推断
+- 若 AI 未输出该字段，页面不展示爆发功能点模块（不影响其他内容）
+
+---
+
+## 5. Amazon 市场验证
 
 **文件**：`src/adapters/AmazonAdapter.ts`
 
@@ -218,6 +257,7 @@ GET https://serpapi.com/search.json
 | v2 | 2026-04-17 | SR评分 | 加入 RatingOpportunity 维度；饱和度改对数曲线；权重调整为 5:3:2 |
 | v2 | 2026-04-17 | 资金模型 | 落地成本系数按品类区分；风险基准量改为动态计算；定价改用 Top5 中位数 |
 | v3 | 2026-04-17 | 资金模型 | 修复风险标记恒为 true 的逻辑 bug；改用固定 MIN_VIABLE_QTY=300 件判断资金是否足够测款 |
+| v1 | 2026-04-17 | 爆发功能点 | 新增爆发功能点识别模块；从 TikTok 文案/标签 + Amazon 竞品标题三路信号 AI 提炼 viralFeature |
 | v1 | 2026-04-17 | SR推荐等级 | 新增 4 档推荐等级：strong/consider/caution/avoid，阈值 0.75/0.55/0.35 |
 | v2 | 2026-04-17 | TikTok信号 | 新增 videoUrl（视频链接）、coverUrl（封面图）字段 |
 | v2 | 2026-04-17 | Amazon验证 | 新增 imageUrl（商品图）、productUrl（amazon.com/dp/ASIN）字段 |

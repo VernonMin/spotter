@@ -70,6 +70,9 @@ export class TikHubAdapter {
     );
 
     const coverUrls = v.video?.cover?.url_list ?? [];
+    const hashtags = (v.text_extra ?? [])
+      .filter(t => t.hashtag_name)
+      .map(t => t.hashtag_name as string);
 
     return {
       videoId: v.aweme_id,
@@ -84,6 +87,8 @@ export class TikHubAdapter {
       momentumMultiplier,
       videoUrl: v.share_url ?? undefined,
       coverUrl: coverUrls[0] ?? undefined,
+      videoDesc: v.desc ?? undefined,
+      hashtags: hashtags.length > 0 ? hashtags : undefined,
     };
   }
 
@@ -152,6 +157,8 @@ interface RawTikTokVideo {
   aweme_id: string;
   create_time: number;
   share_url?: string;
+  desc?: string;
+  text_extra?: Array<{ hashtag_name?: string }>;
   statistics: {
     play_count: number;
     digg_count: number;
