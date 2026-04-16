@@ -118,9 +118,10 @@ export class TikHubAdapter {
     // 无文案数据，无法判断，放行
     if (!text.trim()) return true;
 
-    // 关键词拆词（多词关键词只需出现其中一个有意义的词）
-    const kwWords = keyword.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    const hasKeyword = kwWords.some(w => text.includes(w));
+    // 关键词匹配：优先完整短语，避免 "tea cup" 被 "milk tea" 误匹配
+    const kwLower = keyword.toLowerCase();
+    const kwNoSpace = kwLower.replace(/\s+/g, ''); // "tea cup" → "teacup"
+    const hasKeyword = text.includes(kwLower) || text.includes(kwNoSpace);
     if (!hasKeyword) return false;
 
     // 关键词存在的前提下，还需要商业信号词
