@@ -30,6 +30,8 @@ export interface TikTokDetail {
   momentumMultiplier: number;
   authorFollowers: number;
   publishedAt: string;
+  videoUrl?: string;
+  coverUrl?: string;
 }
 
 export interface AmazonDetail {
@@ -42,6 +44,8 @@ export interface AmazonDetail {
     price: number;
     rating: number;
     reviewCount: number;
+    imageUrl?: string;
+    productUrl?: string;
   }>;
 }
 
@@ -123,6 +127,8 @@ export class SpotterScanner {
           momentumMultiplier: topSignalRaw.momentumMultiplier,
           authorFollowers: topSignalRaw.authorFollowers,
           publishedAt: topSignalRaw.publishedAt,
+          videoUrl: topSignalRaw.videoUrl,
+          coverUrl: topSignalRaw.coverUrl,
         },
       });
 
@@ -151,6 +157,8 @@ export class SpotterScanner {
             price: p.price,
             rating: p.rating,
             reviewCount: p.reviewCount,
+            imageUrl: p.imageUrl,
+            productUrl: p.productUrl,
           })),
         },
       });

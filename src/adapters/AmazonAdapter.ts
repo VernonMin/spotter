@@ -43,14 +43,16 @@ export class AmazonAdapter {
 
     const topProducts: AmazonProduct[] = results.map((r) => {
       const price = r.extracted_price ?? 0;
+      const asin = r.asin ?? '';
       return {
-        asin: r.asin ?? '',
+        asin,
         title: r.title ?? '',
         rating: r.rating ?? 0,
         reviewCount: r.reviews ?? 0,
         price,
-        // 落地成本 = 售价 × 1.35（含头程运费 + FBA 费用估算）
         estimatedLandedCost: parseFloat((price * 1.35).toFixed(2)),
+        imageUrl: r.thumbnail ?? undefined,
+        productUrl: asin ? `https://www.amazon.com/dp/${asin}` : undefined,
       };
     });
 
@@ -105,5 +107,7 @@ interface SerpApiResponse {
     rating?: number;
     reviews?: number;
     extracted_price?: number;
+    thumbnail?: string;
+    link?: string;
   }>;
 }

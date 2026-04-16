@@ -763,16 +763,26 @@
     if (step === 1 && status === 'done' && tiktokDetail) {
       const d = tiktokDetail;
       const daysAgo = Math.round((Date.now() - new Date(d.publishedAt).getTime()) / 86400000);
+      const coverHtml = d.coverUrl
+        ? `<a href="${d.videoUrl ?? '#'}" target="_blank" rel="noopener">
+             <img src="${d.coverUrl}" style="width:60px;height:80px;object-fit:cover;border-radius:5px;flex-shrink:0;display:block;" />
+           </a>`
+        : '';
       el.innerHTML = headerLine + `
         <div class="detail-box">
-          <div class="db-title">TikTok 最优信号</div>
-          <div class="db-row">
-            <div class="db-cell"><div class="db-label">播放量</div><div class="db-value">${fmtNum(d.playCount)}</div></div>
-            <div class="db-cell"><div class="db-label">点赞数</div><div class="db-value">${fmtNum(d.diggCount)}</div></div>
-            <div class="db-cell"><div class="db-label">互动率</div><div class="db-value ${d.engagementRate >= 0.05 ? 'good' : ''}">${(d.engagementRate*100).toFixed(1)}%</div></div>
-            <div class="db-cell"><div class="db-label">爆发倍数</div><div class="db-value good">${d.momentumMultiplier}x</div></div>
-            <div class="db-cell"><div class="db-label">作者粉丝</div><div class="db-value">${fmtNum(d.authorFollowers)}</div></div>
-            <div class="db-cell"><div class="db-label">发布时间</div><div class="db-value">${daysAgo} 天前</div></div>
+          <div class="db-title">TikTok 最优信号${d.videoUrl ? ` · <a href="${d.videoUrl}" target="_blank" rel="noopener" style="color:var(--accent);">查看视频 ↗</a>` : ''}</div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            ${coverHtml}
+            <div style="flex:1;">
+              <div class="db-row">
+                <div class="db-cell"><div class="db-label">播放量</div><div class="db-value">${fmtNum(d.playCount)}</div></div>
+                <div class="db-cell"><div class="db-label">点赞数</div><div class="db-value">${fmtNum(d.diggCount)}</div></div>
+                <div class="db-cell"><div class="db-label">互动率</div><div class="db-value ${d.engagementRate >= 0.05 ? 'good' : ''}">${(d.engagementRate*100).toFixed(1)}%</div></div>
+                <div class="db-cell"><div class="db-label">爆发倍数</div><div class="db-value good">${d.momentumMultiplier}x</div></div>
+                <div class="db-cell"><div class="db-label">作者粉丝</div><div class="db-value">${fmtNum(d.authorFollowers)}</div></div>
+                <div class="db-cell"><div class="db-label">发布时间</div><div class="db-value">${daysAgo} 天前</div></div>
+              </div>
+            </div>
           </div>
         </div>`;
 
@@ -783,7 +793,8 @@
       const satCls = d.saturationIndex > 3 ? 'warn' : 'good';
       const productsHtml = d.topProducts.map(p => `
         <div class="db-product">
-          <span class="prod-title">${p.title}</span>
+          ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:32px;height:32px;object-fit:contain;border-radius:4px;flex-shrink:0;background:#fff;" />` : ''}
+          <span class="prod-title">${p.productUrl ? `<a href="${p.productUrl}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text)'">${p.title}</a>` : p.title}</span>
           <span class="prod-rating">★${p.rating}</span>
           <span class="prod-reviews">${fmtNum(p.reviewCount)}评</span>
           <span class="prod-price">$${p.price}</span>
@@ -873,6 +884,16 @@
             <div class="rec-sr">SR ${p.score.sr.toFixed(3)} · 爆发 ${p.score.momentumComponent.toFixed(3)} · 竞争 ${p.score.saturationComponent.toFixed(3)} · 机会 ${p.score.opportunityComponent.toFixed(3)}</div>
           </div>
         </div>
+
+        ${p.tiktok.coverUrl ? `
+        <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+          <a href="${p.tiktok.videoUrl ?? '#'}" target="_blank" rel="noopener">
+            <img src="${p.tiktok.coverUrl}" style="width:48px;height:64px;object-fit:cover;border-radius:6px;" />
+          </a>
+          <div style="font-size:12px;color:var(--text-muted);">
+            TikTok 最优信号 · <a href="${p.tiktok.videoUrl}" target="_blank" rel="noopener" style="color:var(--accent);">查看视频 ↗</a>
+          </div>
+        </div>` : ''}
 
         <div class="metrics-grid">
           <div class="metric"><div class="m-label">爆发倍数</div><div class="m-value">${p.tiktok.momentumMultiplier}x</div></div>

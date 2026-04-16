@@ -63,13 +63,13 @@ export class TikHubAdapter {
     const diggCount = v.statistics?.digg_count ?? 0;
     const engagementRate = playCount > 0 ? diggCount / playCount : 0;
 
-    // 用互动率（点赞/播放）× 播放量级推算爆发倍数
-    // 播放量每增加 100 万贡献 1x，互动率超 5% 额外加权
     const playMillions = playCount / 1_000_000;
     const engagementBonus = engagementRate >= 0.05 ? 1.5 : 1.0;
     const momentumMultiplier = parseFloat(
       Math.max(1, playMillions * engagementBonus * 10).toFixed(2)
     );
+
+    const coverUrls = v.video?.cover?.url_list ?? [];
 
     return {
       videoId: v.aweme_id,
@@ -82,6 +82,8 @@ export class TikHubAdapter {
       publishedAt: new Date(v.create_time * 1000).toISOString(),
       engagementRate: parseFloat(engagementRate.toFixed(4)),
       momentumMultiplier,
+      videoUrl: v.share_url ?? undefined,
+      coverUrl: coverUrls[0] ?? undefined,
     };
   }
 
@@ -149,6 +151,7 @@ interface TikHubResponse {
 interface RawTikTokVideo {
   aweme_id: string;
   create_time: number;
+  share_url?: string;
   statistics: {
     play_count: number;
     digg_count: number;
@@ -157,5 +160,10 @@ interface RawTikTokVideo {
   };
   author: {
     follower_count: number;
+  };
+  video?: {
+    cover?: {
+      url_list?: string[];
+    };
   };
 }

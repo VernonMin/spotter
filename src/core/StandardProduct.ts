@@ -12,10 +12,10 @@ export interface TikTokSignal {
   shareCount: number;
   authorFollowers: number;
   publishedAt: string;
-  // 互动率 = diggCount / playCount
   engagementRate: number;
-  // 7天内播放量爆发倍数（相对基线）
   momentumMultiplier: number;
+  videoUrl?: string;   // TikTok 视频链接
+  coverUrl?: string;   // 视频封面图（有效期约 24h）
 }
 
 export interface AmazonMetrics {
@@ -35,8 +35,9 @@ export interface AmazonProduct {
   rating: number;
   reviewCount: number;
   price: number;
-  // 落地成本 = 采购价 + 国际运费 + FBA 费用
   estimatedLandedCost: number;
+  imageUrl?: string;   // 商品主图
+  productUrl?: string; // Amazon 商品页链接
 }
 
 export interface FinancialProfile {
