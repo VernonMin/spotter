@@ -155,23 +155,32 @@ if (落地成本 × 300 > 采购预算) → 标记「资金风险极高」
 | publishTimeDays | 7 天 | 只看近期爆发信号，过时信号无参考价值 |
 | requireCommercialSignal | true | 要求视频含商业意图信号词，过滤生活/娱乐类内容 |
 
-#### 商业意图信号词表（requireCommercialSignal）
-视频文案或标签中包含以下任意一词，则认定为商品相关内容：
+#### 商业意图双重过滤逻辑（requireCommercialSignal）
+
+单纯检查商业词不够，因为 `#shop`、`#link`、`#ad` 等词在生活类视频中也普遍存在。过滤逻辑分三步：
 
 ```
-review / haul / unbox / unboxing
-shop / shopping / shopwithme / tiktokshop
-buy / buying / purchase
-amazon / amazonfinds / amazonhaul
-tryon / try on / tryonhaul
-ad / sponsored / affiliate / collab
-discount / code / promo / sale / deal
-recommend / recommendation / honest
-product / brand / worth it / must have
-link in bio / linkinbio
+1. 若视频无文案且无标签 → 放行（无法判断，给机会）
+2. 关键词必须出现在文案或标签中 → 不符合则过滤
+3. 同时需包含商业信号词 → 不符合则过滤
 ```
 
-**背景**：TikTok 关键词搜索返回所有含该词的视频，不区分商业意图。例如搜索 "underwear" 可能返回生活方式类视频（穿内衣游泳等），与选品无关。开启此过滤后只保留有商业信号的视频。
+步骤 2 是关键：真正的商品视频会在文案/标签里提及商品词，而借势蹭热度的生活类视频不会。
+
+#### 商业意图信号词表
+使用具体词组，避免 `shop`/`link` 等过于泛化的单词误判：
+
+```
+review / haul / unboxing
+tiktokshop / shopwithme / amazonfinds / amazonhaul
+tryon / tryonhaul / try on haul
+sponsored / affiliate
+honest review / product review
+recommend / must have / worth it
+amazon find / amazon product
+```
+
+**背景**：TikTok 关键词搜索返回所有含该词的视频，不区分商业意图。生活类视频可能因带有泛化商业标签而绕过简单过滤，双重检查可有效排除此类内容。
 
 #### 所有条件均可在页面上覆盖
 用户在前端输入框填写即覆盖默认值，不填则使用默认值。requireCommercialSignal 在页面以勾选框形式展示，默认勾选。

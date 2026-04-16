@@ -92,26 +92,38 @@ export class TikHubAdapter {
     };
   }
 
-  // 商业意图信号词：出现任意一个即认为是商品相关内容
+  // 商业意图信号词：使用具体词组，避免 #shop / #link 等泛化词误判
   private static readonly COMMERCIAL_SIGNALS = [
-    'review', 'haul', 'unbox', 'unboxing',
-    'shop', 'shopping', 'shopwithme', 'tiktokshop',
-    'buy', 'buying', 'purchase',
-    'amazon', 'amazonfinds', 'amazonhaul',
-    'tryon', 'try on', 'tryonhaul',
-    'ad', 'sponsored', 'affiliate', 'collab',
-    'discount', 'code', 'promo', 'sale', 'deal',
-    'recommend', 'recommendation', 'honest',
-    'product', 'brand', 'worth it', 'must have',
-    'link in bio', 'linkinbio',
+    'review', 'haul', 'unboxing',
+    'tiktokshop', 'shopwithme', 'amazonfinds', 'amazonhaul',
+    'tryon', 'tryonhaul', 'try on haul',
+    'sponsored', 'affiliate',
+    'honest review', 'product review',
+    'recommend', 'must have', 'worth it',
+    'amazon find', 'amazon product',
   ];
 
-  private hasCommercialSignal(signal: TikTokSignal): boolean {
+  /**
+   * 商业意图双重检查：
+   * 1. 若无文案/标签数据 → 放行（无法判断，给机会）
+   * 2. 关键词必须出现在文案或标签中（排除借势蹭流量的生活类视频）
+   * 3. 同时需含商业信号词（确认是商品内容而非泛泛提及）
+   */
+  private hasCommercialSignal(signal: TikTokSignal, keyword: string): boolean {
     const text = [
       signal.videoDesc ?? '',
       ...(signal.hashtags ?? []),
     ].join(' ').toLowerCase();
 
+    // 无文案数据，无法判断，放行
+    if (!text.trim()) return true;
+
+    // 关键词拆词（多词关键词只需出现其中一个有意义的词）
+    const kwWords = keyword.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const hasKeyword = kwWords.some(w => text.includes(w));
+    if (!hasKeyword) return false;
+
+    // 关键词存在的前提下，还需要商业信号词
     return TikHubAdapter.COMMERCIAL_SIGNALS.some(s => text.includes(s));
   }
 
@@ -124,7 +136,7 @@ export class TikHubAdapter {
       signal.engagementRate < f.minEngagementRate ||
       !publishedRecently
     ) return false;
-    if (f.requireCommercialSignal && !this.hasCommercialSignal(signal)) return false;
+    if (f.requireCommercialSignal && !this.hasCommercialSignal(signal, signal.keyword)) return false;
     return true;
   }
 
