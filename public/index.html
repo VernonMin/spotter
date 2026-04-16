@@ -918,7 +918,10 @@ unbox / tryon / recommend 等">?</span>
               <div class="db-row">
                 <div class="db-cell"><div class="db-label">播放量</div><div class="db-value">${fmtNum(d.playCount)}</div></div>
                 <div class="db-cell"><div class="db-label">点赞数</div><div class="db-value">${fmtNum(d.diggCount)}</div></div>
-                <div class="db-cell"><div class="db-label">互动率</div><div class="db-value ${d.engagementRate >= 0.05 ? 'good' : ''}">${(d.engagementRate*100).toFixed(1)}%</div></div>
+                <div class="db-cell"><div class="db-label">互动率<span class="tip" data-tip="公式：点赞数 ÷ 播放量
+只统计点赞，不含评论和分享
+点赞更直接反映购买意愿
+≥ 5% 时爆发倍数获得 1.5 倍加成">?</span></div><div class="db-value ${d.engagementRate >= 0.05 ? 'good' : ''}">${(d.engagementRate*100).toFixed(1)}%</div></div>
                 <div class="db-cell"><div class="db-label">爆发倍数<span class="tip" data-tip="TikTok 视频爆发程度
 公式：max(1, 播放量/100万 × 加成 × 10)
 互动率 ≥ 5% 时加成 1.5 倍
@@ -939,7 +942,9 @@ unbox / tryon / recommend 等">?</span>
         <div class="db-product">
           ${p.imageUrl ? `<img src="${p.imageUrl}" style="width:32px;height:32px;object-fit:contain;border-radius:4px;flex-shrink:0;background:#fff;" />` : ''}
           <span class="prod-title">${p.productUrl ? `<a href="${p.productUrl}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text)'">${p.title}</a>` : p.title}</span>
-          <span class="prod-rating">★${p.rating}</span>
+          <span class="prod-rating" title="Amazon 买家评分（满分 5.0）
+来源：SerpApi 抓取的 Amazon 搜索结果
+由真实购买用户在 Amazon 上留评产生">★${p.rating}</span>
           <span class="prod-reviews">${fmtNum(p.reviewCount)}评</span>
           <span class="prod-price">$${p.price}</span>
         </div>`).join('');
@@ -1069,7 +1074,10 @@ L = log₁₀(1 + 搜索结果数/1000)
 公式：max(1, 播放量/100万 × 加成 × 10)
 互动率 ≥ 5% 时加成 1.5 倍
 10x 为满分，封顶不超过 1.0 分">?</span></div><div class="m-value">${p.tiktok.momentumMultiplier}x</div></div>
-          <div class="metric"><div class="m-label">互动率</div><div class="m-value">${(p.tiktok.engagementRate*100).toFixed(1)}%</div></div>
+          <div class="metric"><div class="m-label">互动率<span class="tip" data-tip="公式：点赞数 ÷ 播放量
+只统计点赞，不含评论和分享
+点赞更直接反映购买意愿
+≥ 5% 时爆发倍数获得 1.5 倍加成">?</span></div><div class="m-value">${(p.tiktok.engagementRate*100).toFixed(1)}%</div></div>
           <div class="metric"><div class="m-label">Amazon 搜索量</div><div class="m-value">${(p.amazon.searchResults/1000).toFixed(0)}k</div></div>
           <div class="metric"><div class="m-label">竞品均分<span class="tip" data-tip="前 10 名竞品星级算术平均值
 满分 5.0

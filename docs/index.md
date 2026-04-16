@@ -23,7 +23,7 @@
 |--------|---------|---------|
 | `playCount` | 进度·播放量 | API 原始值：`statistics.play_count` |
 | `diggCount` | 进度·点赞数 | API 原始值：`statistics.digg_count` |
-| `engagementRate` | 进度·互动率 | `diggCount / playCount`（playCount = 0 时取 0） |
+| `engagementRate` | 进度·互动率 / 结果·互动率 | `diggCount / playCount`（playCount = 0 时取 0）<br>只统计点赞，不含评论和分享。点赞更直接反映购买意愿；≥ 5% 时爆发倍数获得 1.5 倍加成 |
 | `momentumMultiplier` | 进度·爆发倍数 / 结果·爆发倍数 | `max(1, (playCount / 1,000,000) × engagementBonus × 10)`<br>其中 `engagementBonus = 1.5（engagementRate ≥ 5%）或 1.0` |
 | `authorFollowers` | 进度·作者粉丝 | API 原始值：`author.follower_count` |
 | `publishedAt` | 进度·发布时间（x 天前） | `new Date(create_time × 1000).toISOString()`，页面展示：`floor((now - publishedAt) / 86400000)` 天 |
@@ -45,7 +45,7 @@
 | `saturationIndex` | 进度·饱和度 | `min(searchResults / 100,000, 10)`<br>以 10 万条 = 1.0 为基准，上限 10 |
 | `avgRating` | 进度·竞品均分 / 结果·竞品均分 | `sum(rating[0..9]) / count`（取前 10 名算术平均）<br>低于 4.2 触发 AI 痛点提炼 |
 | `topProducts[].price` | 进度·竞品价格 | API 原始值：`extracted_price` |
-| `topProducts[].rating` | 进度·竞品评分 | API 原始值：`rating` |
+| `topProducts[].rating` | 进度·竞品评分（★ 列） | API 原始值：`rating`，来源为 Amazon 真实买家评分（满分 5.0），由 SerpApi 从 Amazon 搜索页抓取 |
 | `topProducts[].reviewCount` | 进度·竞品评论数 | API 原始值：`reviews` |
 | `topProducts[].imageUrl` | 进度·竞品缩略图 | API 原始值：`thumbnail` |
 | `topProducts[].productUrl` | 进度·竞品链接 | 构造：`"https://www.amazon.com/dp/" + asin` |
@@ -138,3 +138,4 @@
 |------|------|---------|
 | 2026-04-17 | 全部 | 初始版本，梳理页面所有字段及完整计算公式 |
 | 2026-04-17 | TikTok信号 / AI卡片 | 新增 videoDesc、hashtags 字段；新增第6节 AI 决策卡片字段（含 viralFeature） |
+| 2026-04-17 | TikTok信号 / Amazon竞品 | 补充 engagementRate 计算说明（只含点赞）；补充 topProducts[].rating 来源说明 |
