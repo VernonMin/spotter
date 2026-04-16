@@ -374,6 +374,51 @@
     }
     .no-result strong { color: var(--warning); display: block; margin-bottom: 6px; font-size: 14px; }
     .no-result p { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+    /* ── Tooltip ── */
+    .tip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 13px;
+      height: 13px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-radius: 50%;
+      font-size: 8px;
+      font-weight: 700;
+      cursor: help;
+      position: relative;
+      margin-left: 3px;
+      flex-shrink: 0;
+      vertical-align: middle;
+    }
+    .tip::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #252838;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 11px;
+      border-radius: 7px;
+      font-size: 11px;
+      line-height: 1.65;
+      white-space: pre-line;
+      width: max-content;
+      max-width: 260px;
+      z-index: 300;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s;
+      font-weight: normal;
+      text-transform: none;
+      letter-spacing: 0;
+      font-family: inherit;
+    }
+    .tip:hover::after { opacity: 1; }
   </style>
 </head>
 <body>
@@ -778,7 +823,10 @@
                 <div class="db-cell"><div class="db-label">播放量</div><div class="db-value">${fmtNum(d.playCount)}</div></div>
                 <div class="db-cell"><div class="db-label">点赞数</div><div class="db-value">${fmtNum(d.diggCount)}</div></div>
                 <div class="db-cell"><div class="db-label">互动率</div><div class="db-value ${d.engagementRate >= 0.05 ? 'good' : ''}">${(d.engagementRate*100).toFixed(1)}%</div></div>
-                <div class="db-cell"><div class="db-label">爆发倍数</div><div class="db-value good">${d.momentumMultiplier}x</div></div>
+                <div class="db-cell"><div class="db-label">爆发倍数<span class="tip" data-tip="TikTok 视频爆发程度
+公式：max(1, 播放量/100万 × 加成 × 10)
+互动率 ≥ 5% 时加成 1.5 倍
+10x 为满分，封顶不超过 1.0 分">?</span></div><div class="db-value good">${d.momentumMultiplier}x</div></div>
                 <div class="db-cell"><div class="db-label">作者粉丝</div><div class="db-value">${fmtNum(d.authorFollowers)}</div></div>
                 <div class="db-cell"><div class="db-label">发布时间</div><div class="db-value">${daysAgo} 天前</div></div>
               </div>
@@ -804,8 +852,16 @@
           <div class="db-title">Amazon 市场概况</div>
           <div class="db-row">
             <div class="db-cell"><div class="db-label">搜索结果</div><div class="db-value">${fmtNum(d.searchResults)}</div></div>
-            <div class="db-cell"><div class="db-label">饱和度</div><div class="db-value ${satCls}">${d.saturationIndex.toFixed(2)}</div></div>
-            <div class="db-cell"><div class="db-label">竞品均分</div><div class="db-value ${ratingCls}">${d.avgRating.toFixed(1)} / 5.0${d.avgRating < 4.2 ? ' ⚠' : ''}</div></div>
+            <div class="db-cell"><div class="db-label">饱和度<span class="tip" data-tip="Amazon 市场拥挤程度
+公式：搜索结果数 ÷ 100,000
+10 万条结果 = 1.0 基准
+数值越低竞争越少
+超过 3.0 视为拥挤市场">?</span></div><div class="db-value ${satCls}">${d.saturationIndex.toFixed(2)}</div></div>
+            <div class="db-cell"><div class="db-label">竞品均分<span class="tip" data-tip="前 10 名竞品星级算术平均值
+满分 5.0
+低于 4.2 说明消费者整体不满意
+低于 4.2 时 AI 自动提炼改进痛点
+均分越低改进空间越大">?</span></div><div class="db-value ${ratingCls}">${d.avgRating.toFixed(1)} / 5.0${d.avgRating < 4.2 ? ' ⚠' : ''}</div></div>
           </div>
           <div class="db-title" style="margin-top:4px;">竞品 Top ${d.topProducts.length}</div>
           <div class="db-products">${productsHtml}</div>
@@ -881,7 +937,24 @@
             <div class="rec-label">${rec.label}</div>
             <div class="rec-title">${rec.title}</div>
             <div class="rec-reason">${rec.reason}</div>
-            <div class="rec-sr">SR ${p.score.sr.toFixed(3)} · 爆发 ${p.score.momentumComponent.toFixed(3)} · 竞争 ${p.score.saturationComponent.toFixed(3)} · 机会 ${p.score.opportunityComponent.toFixed(3)}</div>
+            <div class="rec-sr">
+              <span class="tip" style="margin-right:3px;" data-tip="综合评分 = 爆发 + 竞争 + 机会
+满分 1.0
+= min(爆发倍数/10,1) × 0.5
++ 对数竞争空间 × 0.3
++ (5.0-竞品均分)/5.0 × 0.2">?</span>SR ${p.score.sr.toFixed(3)}
+              · <span class="tip" style="margin:0 2px;" data-tip="爆发分项（权重 50%）
+= min(爆发倍数 ÷ 10, 1.0) × 0.5
+10x 爆发 → 满分 0.500">?</span>爆发 ${p.score.momentumComponent.toFixed(3)}
+              · <span class="tip" style="margin:0 2px;" data-tip="竞争分项（权重 30%）
+= max(0, 1 - L/(L+1)) × 0.3
+L = log₁₀(1 + 搜索结果数/1000)
+搜索量越少得分越高">?</span>竞争 ${p.score.saturationComponent.toFixed(3)}
+              · <span class="tip" style="margin:0 2px;" data-tip="机会分项（权重 20%）
+= max(0, (5.0 - 竞品均分) / 5.0) × 0.2
+均分 4.8 → 0.008，均分 3.5 → 0.060
+竞品均分越低改进空间越大">?</span>机会 ${p.score.opportunityComponent.toFixed(3)}
+            </div>
           </div>
         </div>
 
@@ -896,10 +969,17 @@
         </div>` : ''}
 
         <div class="metrics-grid">
-          <div class="metric"><div class="m-label">爆发倍数</div><div class="m-value">${p.tiktok.momentumMultiplier}x</div></div>
+          <div class="metric"><div class="m-label">爆发倍数<span class="tip" data-tip="TikTok 视频爆发程度
+公式：max(1, 播放量/100万 × 加成 × 10)
+互动率 ≥ 5% 时加成 1.5 倍
+10x 为满分，封顶不超过 1.0 分">?</span></div><div class="m-value">${p.tiktok.momentumMultiplier}x</div></div>
           <div class="metric"><div class="m-label">互动率</div><div class="m-value">${(p.tiktok.engagementRate*100).toFixed(1)}%</div></div>
           <div class="metric"><div class="m-label">Amazon 搜索量</div><div class="m-value">${(p.amazon.searchResults/1000).toFixed(0)}k</div></div>
-          <div class="metric"><div class="m-label">竞品均分</div><div class="m-value">${p.amazon.avgRating.toFixed(1)}</div></div>
+          <div class="metric"><div class="m-label">竞品均分<span class="tip" data-tip="前 10 名竞品星级算术平均值
+满分 5.0
+低于 4.2 说明消费者整体不满意
+低于 4.2 时 AI 自动提炼改进痛点
+均分越低改进空间越大">?</span></div><div class="m-value">${p.amazon.avgRating.toFixed(1)}</div></div>
         </div>
 
         <div class="finance-row">
