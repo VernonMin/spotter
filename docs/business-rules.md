@@ -156,6 +156,12 @@ GET /api/v1/tiktok/app/v3/fetch_video_search_result
 参数：keyword, count=20, publish_time=7, sort_type=1（最多点赞）, region=US
 ```
 
+#### 返回字段
+| 字段 | 说明 |
+|------|------|
+| videoUrl | TikTok 视频分享链接（share_url） |
+| coverUrl | 视频封面图（有效期约 24 小时，仅用于展示） |
+
 ---
 
 ## 4. Amazon 市场验证
@@ -172,7 +178,16 @@ SerpApi Amazon Search Engine
 |------|------|
 | searchResults | Amazon 搜索结果总数，用于计算饱和度 |
 | avgRating | 前 10 名竞品平均分 |
-| topProducts | 前 10 名竞品列表（ASIN、标题、价格、评分、评论数） |
+| topProducts | 前 10 名竞品列表（ASIN、标题、价格、评分、评论数、商品图、链接） |
+
+#### 饱和度说明
+```
+饱和度 = searchResults / 100,000（上限 10）
+```
+以 10 万条搜索结果 = 饱和度 1.0 为基准，数值越小竞争越少。
+
+#### 竞品均分说明
+前 10 名竞品星级评分的算术平均值（满分 5.0）。低于 4.2 触发 AI 痛点提炼。
 
 #### 决策触发规则
 ```
@@ -196,3 +211,6 @@ GET https://serpapi.com/search.json
 | v2 | 2026-04-17 | SR评分 | 加入 RatingOpportunity 维度；饱和度改对数曲线；权重调整为 5:3:2 |
 | v2 | 2026-04-17 | 资金模型 | 落地成本系数按品类区分；风险基准量改为动态计算；定价改用 Top5 中位数 |
 | v1 | 2026-04-17 | SR推荐等级 | 新增 4 档推荐等级：strong/consider/caution/avoid，阈值 0.75/0.55/0.35 |
+| v2 | 2026-04-17 | TikTok信号 | 新增 videoUrl（视频链接）、coverUrl（封面图）字段 |
+| v2 | 2026-04-17 | Amazon验证 | 新增 imageUrl（商品图）、productUrl（amazon.com/dp/ASIN）字段 |
+| v2 | 2026-04-17 | Amazon验证 | 补充饱和度和竞品均分的计算说明 |
