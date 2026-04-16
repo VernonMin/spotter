@@ -3,7 +3,7 @@ services:
     name: spotter
     runtime: node
     buildCommand: npm install && npm run build
-    startCommand: node dist/server/index.js
+    startCommand: npm run serve
     envVars:
       - key: NODE_ENV
         value: production
