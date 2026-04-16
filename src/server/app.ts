@@ -52,6 +52,7 @@ app.post('/api/scan', async (req: Request, res: Response) => {
   // SSE 头
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no'); // 禁止 Render/Nginx 代理缓冲
   res.setHeader('Connection', 'keep-alive');
 
   const send = (event: string, data: unknown) => {
