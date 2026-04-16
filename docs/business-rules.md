@@ -287,6 +287,7 @@ GET https://serpapi.com/search.json
 | v3 | 2026-04-17 | 资金模型 | 修复风险标记恒为 true 的逻辑 bug；改用固定 MIN_VIABLE_QTY=300 件判断资金是否足够测款 |
 | v1 | 2026-04-17 | 爆发功能点 | 新增爆发功能点识别模块；从 TikTok 文案/标签 + Amazon 竞品标题三路信号 AI 提炼 viralFeature |
 | v2 | 2026-04-17 | TikTok信号 | 新增 requireCommercialSignal 过滤器（默认开启），过滤生活/娱乐类无商业意图视频 |
+| v3 | 2026-04-17 | TikTok信号 | 修复商业过滤无效问题：改为双重检查（关键词存在 + 商业信号词），收窄信号词表避免 #shop/#link 泛化词误判 |
 | v1 | 2026-04-17 | SR推荐等级 | 新增 4 档推荐等级：strong/consider/caution/avoid，阈值 0.75/0.55/0.35 |
 | v2 | 2026-04-17 | TikTok信号 | 新增 videoUrl（视频链接）、coverUrl（封面图）字段 |
 | v2 | 2026-04-17 | Amazon验证 | 新增 imageUrl（商品图）、productUrl（amazon.com/dp/ASIN）字段 |
