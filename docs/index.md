@@ -31,6 +31,7 @@
 | `coverUrl` | 进度·封面图 / 结果·封面图 | API 原始值：`video.cover.url_list[0]` |
 | `videoDesc` | 不直接展示，传给 AI | API 原始值：`desc`（视频文案） |
 | `hashtags` | 不直接展示，传给 AI | API 原始值：`text_extra[].hashtag_name` 过滤空值后组成数组 |
+| `videoDesc` + `hashtags` 商业检查 | 不展示（过滤逻辑） | `requireCommercialSignal=true` 时：`[videoDesc, ...hashtags].join(' ').toLowerCase()` 包含任意商业信号词则通过，否则过滤 |
 
 ---
 

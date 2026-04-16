@@ -153,9 +153,28 @@ if (落地成本 × 300 > 采购预算) → 标记「资金风险极高」
 | minPlayCount | 100,000 | 过滤无效低流量视频 |
 | minEngagementRate | 3%（0.03） | 互动率低说明流量非自然爆发 |
 | publishTimeDays | 7 天 | 只看近期爆发信号，过时信号无参考价值 |
+| requireCommercialSignal | true | 要求视频含商业意图信号词，过滤生活/娱乐类内容 |
+
+#### 商业意图信号词表（requireCommercialSignal）
+视频文案或标签中包含以下任意一词，则认定为商品相关内容：
+
+```
+review / haul / unbox / unboxing
+shop / shopping / shopwithme / tiktokshop
+buy / buying / purchase
+amazon / amazonfinds / amazonhaul
+tryon / try on / tryonhaul
+ad / sponsored / affiliate / collab
+discount / code / promo / sale / deal
+recommend / recommendation / honest
+product / brand / worth it / must have
+link in bio / linkinbio
+```
+
+**背景**：TikTok 关键词搜索返回所有含该词的视频，不区分商业意图。例如搜索 "underwear" 可能返回生活方式类视频（穿内衣游泳等），与选品无关。开启此过滤后只保留有商业信号的视频。
 
 #### 所有条件均可在页面上覆盖
-用户在前端输入框填写即覆盖默认值，不填则使用默认值。
+用户在前端输入框填写即覆盖默认值，不填则使用默认值。requireCommercialSignal 在页面以勾选框形式展示，默认勾选。
 
 #### TikHub API 接口
 ```
@@ -258,6 +277,7 @@ GET https://serpapi.com/search.json
 | v2 | 2026-04-17 | 资金模型 | 落地成本系数按品类区分；风险基准量改为动态计算；定价改用 Top5 中位数 |
 | v3 | 2026-04-17 | 资金模型 | 修复风险标记恒为 true 的逻辑 bug；改用固定 MIN_VIABLE_QTY=300 件判断资金是否足够测款 |
 | v1 | 2026-04-17 | 爆发功能点 | 新增爆发功能点识别模块；从 TikTok 文案/标签 + Amazon 竞品标题三路信号 AI 提炼 viralFeature |
+| v2 | 2026-04-17 | TikTok信号 | 新增 requireCommercialSignal 过滤器（默认开启），过滤生活/娱乐类无商业意图视频 |
 | v1 | 2026-04-17 | SR推荐等级 | 新增 4 档推荐等级：strong/consider/caution/avoid，阈值 0.75/0.55/0.35 |
 | v2 | 2026-04-17 | TikTok信号 | 新增 videoUrl（视频链接）、coverUrl（封面图）字段 |
 | v2 | 2026-04-17 | Amazon验证 | 新增 imageUrl（商品图）、productUrl（amazon.com/dp/ASIN）字段 |

@@ -92,15 +92,40 @@ export class TikHubAdapter {
     };
   }
 
+  // 商业意图信号词：出现任意一个即认为是商品相关内容
+  private static readonly COMMERCIAL_SIGNALS = [
+    'review', 'haul', 'unbox', 'unboxing',
+    'shop', 'shopping', 'shopwithme', 'tiktokshop',
+    'buy', 'buying', 'purchase',
+    'amazon', 'amazonfinds', 'amazonhaul',
+    'tryon', 'try on', 'tryonhaul',
+    'ad', 'sponsored', 'affiliate', 'collab',
+    'discount', 'code', 'promo', 'sale', 'deal',
+    'recommend', 'recommendation', 'honest',
+    'product', 'brand', 'worth it', 'must have',
+    'link in bio', 'linkinbio',
+  ];
+
+  private hasCommercialSignal(signal: TikTokSignal): boolean {
+    const text = [
+      signal.videoDesc ?? '',
+      ...(signal.hashtags ?? []),
+    ].join(' ').toLowerCase();
+
+    return TikHubAdapter.COMMERCIAL_SIGNALS.some(s => text.includes(s));
+  }
+
   private applyFilters(signal: TikTokSignal, f: FilterConfig): boolean {
     const cutoff = Date.now() - f.publishTimeDays * 24 * 60 * 60 * 1000;
     const publishedRecently = new Date(signal.publishedAt).getTime() >= cutoff;
-    return (
-      signal.authorFollowers <= f.maxAuthorFollowers &&
-      signal.playCount >= f.minPlayCount &&
-      signal.engagementRate >= f.minEngagementRate &&
-      publishedRecently
-    );
+    if (
+      signal.authorFollowers > f.maxAuthorFollowers ||
+      signal.playCount < f.minPlayCount ||
+      signal.engagementRate < f.minEngagementRate ||
+      !publishedRecently
+    ) return false;
+    if (f.requireCommercialSignal && !this.hasCommercialSignal(signal)) return false;
+    return true;
   }
 
   private fetchMock(keyword: string): TikTokSignal[] {
