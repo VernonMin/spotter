@@ -52,16 +52,13 @@ export function calcFinancialProfile(
   const multiplier  = getLandedCostMultiplier(category);
   const landedCost  = parseFloat((medianPrice * multiplier).toFixed(2));
 
-  // ── 风险基准量：随预算动态计算 ──
-  // 基准 = 采购预算 / 落地成本 × 1.5
-  // 含义：如果要采购 1.5 倍建议量都无法满足，说明资金压力过大
-  const riskBaseQty = landedCost > 0
-    ? Math.ceil((procurementBudget / landedCost) * 1.5)
-    : 0;
-
-  const capitalRiskFlag = landedCost > 0 && (landedCost * riskBaseQty > procurementBudget);
+  // ── 资金风险判断：预算能否支撑最小可行测试 ──
+  // Amazon FBA 最小有意义测款量为 300 件
+  // 若采购预算连 300 件都买不起，则资金压力过大
+  const MIN_VIABLE_QTY = 300;
+  const capitalRiskFlag = landedCost > 0 && (landedCost * MIN_VIABLE_QTY > procurementBudget);
   const capitalRiskReason = capitalRiskFlag
-    ? `单品落地成本 $${landedCost.toFixed(2)} × ${riskBaseQty} 件（1.5 倍建议量）= $${(landedCost * riskBaseQty).toFixed(2)}，超过采购预算 $${procurementBudget.toFixed(2)}`
+    ? `单品落地成本 $${landedCost.toFixed(2)} × ${MIN_VIABLE_QTY} 件（最小测款量）= $${(landedCost * MIN_VIABLE_QTY).toFixed(2)}，超过采购预算 $${procurementBudget.toFixed(2)}`
     : undefined;
 
   // ── 建议首批采购量 ──
