@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: spotter
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: TIKHUB_API_KEY
+        sync: false
+      - key: AMAZON_API_KEY
+        sync: false
