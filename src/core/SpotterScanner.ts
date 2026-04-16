@@ -193,12 +193,12 @@ export class SpotterScanner {
       };
 
       // Step 4: AI Insight
-      this.emit({ keyword, step: 4, stepName: 'DeepSeek-V3 决策卡片', status: 'running' });
+      this.emit({ keyword, step: 4, stepName: '决策卡片', status: 'running' });
       try {
         product.aiInsight = await this.insight.generateInsight(product);
-        this.emit({ keyword, step: 4, stepName: 'DeepSeek-V3 决策卡片', status: 'done' });
+        this.emit({ keyword, step: 4, stepName: '决策卡片', status: 'done' });
       } catch (err) {
-        this.emit({ keyword, step: 4, stepName: 'DeepSeek-V3 决策卡片', status: 'error', message: String(err) });
+        this.emit({ keyword, step: 4, stepName: '决策卡片', status: 'error', message: String(err) });
       }
 
       results.push(product);
