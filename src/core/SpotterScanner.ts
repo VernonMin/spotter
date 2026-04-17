@@ -49,6 +49,13 @@ export interface AmazonDetail {
   }>;
 }
 
+export interface DemandDetail {
+  hasDemand: boolean;
+  demandReason: string;
+  summary: string;
+  viralFeature: string;
+}
+
 export interface ProgressEvent {
   keyword: string;
   step: 1 | 2 | 3 | 4;
@@ -59,6 +66,7 @@ export interface ProgressEvent {
   tiktokAllVideos?: TikTokDetail[];
   amazonDetail?: AmazonDetail;
   financial?: FinancialSummary;
+  demandDetail?: DemandDetail;
 }
 
 type ProgressCallback = (event: ProgressEvent) => void;
@@ -67,7 +75,7 @@ type ProgressCallback = (event: ProgressEvent) => void;
  * SpotterScanner — 主流程编排器
  *
  * v2 流程：
- * Discovery(TikTok, 不过滤) -> Validation(Amazon) -> AI 需求判定 + 决策卡片 -> SR 评分 & 资金适配
+ * Discovery(TikTok, 不过滤) -> Validation(Amazon) -> 需求判定 + 决策卡片 -> SR 评分 & 资金适配
  *
  * 核心变化：AI 从最后一步提前到第三步作为"守门人"
  * - TikTok 不再做客户端过滤，全部 20 条视频交给 AI 判断
@@ -143,7 +151,7 @@ export class SpotterScanner {
 
       this.emit({
         keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'done',
-        message: `${allVideos.length} 条视频（全部交给 AI 判定）`,
+        message: `${allVideos.length} 条视频`,
         tiktokDetail: toDetail(topSignal),
         tiktokAllVideos: sorted.map(toDetail),
       });
@@ -179,8 +187,8 @@ export class SpotterScanner {
       // 先计算资金（AI prompt 需要用到）
       const financial = calcFinancialProfile(totalBudget, amazonMetrics.topProducts, categoryLabel);
 
-      // Step 3: AI 需求判定 + 决策卡片（守门人）
-      this.emit({ keyword, step: 3, stepName: 'AI 需求判定', status: 'running' });
+      // Step 3: 需求判定 + 决策卡片（守门人）
+      this.emit({ keyword, step: 3, stepName: '需求判定', status: 'running' });
 
       // 临时构建 product 用于传给 AI（score 暂用占位值）
       const tempProduct: StandardProduct = {
@@ -198,9 +206,18 @@ export class SpotterScanner {
       try {
         aiInsight = await this.insight.generateInsight(tempProduct, allVideos);
         const demandIcon = aiInsight.hasDemand ? '✓ 有商品需求' : '✗ 无明显商品需求';
-        this.emit({ keyword, step: 3, stepName: 'AI 需求判定', status: 'done', message: demandIcon });
+        this.emit({
+          keyword, step: 3, stepName: '需求判定', status: 'done',
+          message: demandIcon,
+          demandDetail: {
+            hasDemand: aiInsight.hasDemand,
+            demandReason: aiInsight.demandReason,
+            summary: aiInsight.summary,
+            viralFeature: aiInsight.viralFeature,
+          },
+        });
       } catch (err) {
-        this.emit({ keyword, step: 3, stepName: 'AI 需求判定', status: 'error', message: String(err) });
+        this.emit({ keyword, step: 3, stepName: '需求判定', status: 'error', message: String(err) });
         // AI 失败时仍然继续，按有需求处理
         aiInsight = undefined;
       }

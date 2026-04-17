@@ -915,7 +915,7 @@
     document.getElementById('progress-bar').style.width = pct + '%';
   }
 
-  function addLog({ keyword, step, stepName, status, message, tiktokDetail, tiktokAllVideos, amazonDetail, financial }) {
+  function addLog({ keyword, step, stepName, status, message, tiktokDetail, tiktokAllVideos, amazonDetail, financial, demandDetail }) {
     const list = document.getElementById('log-list');
     const id = `log-${keyword.replace(/\W+/g, '-')}-${step}`;
     let el = document.getElementById(id);
@@ -928,6 +928,7 @@
     const icon = { done:'✓', error:'✗', skipped:'−', running:'…' }[status] ?? '?';
     const hasDetail = (step === 1 && status === 'done' && tiktokAllVideos) ||
                       (step === 2 && status === 'done' && amazonDetail) ||
+                      (step === 3 && status === 'done' && demandDetail) ||
                       (step === 4 && status === 'done' && financial);
     const collapseIcon = hasDetail ? '<span class="collapse-icon">▼</span>' : '';
     const collapsibleCls = hasDetail ? ' collapsible' : '';
@@ -1001,6 +1002,34 @@
             <div class="db-title" style="margin-top:4px;">竞品 Top ${d.topProducts.length}</div>
             <div class="db-products">${productsHtml}</div>
             ${d.avgRating < 4.2 ? '<div class="fb-warning" style="margin-top:6px;">均分低于 4.2，AI 将自动提炼竞品负面痛点</div>' : ''}
+          </div>
+        </div>`;
+
+    // Step 3 完成：需求判定详情
+    } else if (step === 3 && status === 'done' && demandDetail) {
+      const dd = demandDetail;
+      const verdictColor = dd.hasDemand ? 'var(--success)' : 'var(--error)';
+      const verdictBg = dd.hasDemand ? '#1a2a0a' : '#2a0a0a';
+      const verdictBorder = dd.hasDemand ? '#3a5a1a' : '#5a1a1a';
+      const verdictIcon = dd.hasDemand ? '✓' : '✗';
+      const verdictText = dd.hasDemand ? '有商品需求' : '无明显商品需求';
+      el.innerHTML = headerLine + `
+        <div class="detail-wrap" id="${id}-detail">
+          <div class="detail-box" style="border-color:${verdictBorder};background:${verdictBg};">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <span style="font-size:16px;font-weight:700;color:${verdictColor};">${verdictIcon}</span>
+              <span style="font-size:13px;font-weight:600;color:${verdictColor};">${verdictText}</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:6px;">
+              <strong style="color:var(--text);">判定理由：</strong>${dd.demandReason}
+            </div>
+            ${dd.viralFeature ? `
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:6px;">
+              <strong style="color:var(--text);">爆发功能点：</strong>${dd.viralFeature}
+            </div>` : ''}
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.6;">
+              <strong style="color:var(--text);">总结：</strong>${dd.summary}
+            </div>
           </div>
         </div>`;
 
