@@ -397,6 +397,14 @@
     .risk-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
     .risk-tag { font-size: 11px; background: #2a1a1a; color: var(--error); padding: 2px 8px; border-radius: 20px; }
 
+    /* 卡片折叠 */
+    .card-header { cursor: pointer; user-select: none; }
+    .card-header:hover { opacity: 0.85; }
+    .card-header .card-toggle { font-size: 10px; color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
+    .product-card.card-collapsed .card-toggle { transform: rotate(-90deg); }
+    .card-body { overflow: hidden; transition: max-height .3s ease; }
+    .product-card.card-collapsed .card-body { max-height: 0 !important; overflow: hidden; }
+
     .no-result {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -1079,32 +1087,25 @@
     return String(n);
   }
 
-  function renderDemandVideos(p) {
-    const demandVids = p.tiktokDemandVideos ?? (p.tiktok.coverUrl ? [p.tiktok] : []);
-    if (demandVids.length === 0) return '';
-    const label = p.tiktokDemandVideos
-      ? '商品需求视频 · ' + demandVids.length + ' 条'
-      : 'TikTok 最优信号';
-    const vidsHtml = demandVids.map(function(v) {
-      const daysAgo = Math.round((Date.now() - new Date(v.publishedAt).getTime()) / 86400000);
-      const coverImg = v.coverUrl
-        ? '<a href="' + (v.videoUrl || '#') + '" target="_blank" rel="noopener"><img src="' + v.coverUrl + '" /></a>'
-        : '';
-      const link = v.videoUrl
-        ? '<a href="' + v.videoUrl + '" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent);text-decoration:none;">查看视频 ↗</a>'
-        : '';
-      return '<div class="video-item">' + coverImg +
-        '<div class="vi-info"><div class="vi-stats">' +
-        '<span>▶ ' + fmtNum(v.playCount) + '</span>' +
-        '<span>♥ ' + fmtNum(v.diggCount) + '</span>' +
-        '<span>互动 ' + (v.engagementRate*100).toFixed(1) + '%</span>' +
-        '<span>爆发 ' + v.momentumMultiplier + 'x</span>' +
-        '<span>' + daysAgo + '天前</span>' +
-        '</div>' + link + '</div></div>';
-    }).join('');
+  function renderVideoCard(v) {
+    if (!v || (!v.coverUrl && !v.videoUrl)) return '';
+    var daysAgo = Math.round((Date.now() - new Date(v.publishedAt).getTime()) / 86400000);
+    var coverImg = v.coverUrl
+      ? '<a href="' + (v.videoUrl || '#') + '" target="_blank" rel="noopener"><img src="' + v.coverUrl + '" /></a>'
+      : '';
+    var link = v.videoUrl
+      ? '<a href="' + v.videoUrl + '" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent);text-decoration:none;">查看视频 ↗</a>'
+      : '';
     return '<div style="margin-bottom:12px;">' +
-      '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-weight:600;">' + label + '</div>' +
-      '<div class="video-list">' + vidsHtml + '</div></div>';
+      '<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-weight:600;">TikTok 视频信号</div>' +
+      '<div class="video-list"><div class="video-item">' + coverImg +
+      '<div class="vi-info"><div class="vi-stats">' +
+      '<span>▶ ' + fmtNum(v.playCount) + '</span>' +
+      '<span>♥ ' + fmtNum(v.diggCount) + '</span>' +
+      '<span>互动 ' + (v.engagementRate*100).toFixed(1) + '%</span>' +
+      '<span>爆发 ' + v.momentumMultiplier + 'x</span>' +
+      '<span>' + daysAgo + '天前</span>' +
+      '</div>' + link + '</div></div></div></div>';
   }
 
   function renderResults({ products, report, message }) {
@@ -1132,13 +1133,16 @@
       const rec = p.recommendation;
       const recIcon = REC_ICON[rec.level] ?? '⚪';
 
+      const cardId = 'card-' + i;
       html += `
-      <div class="product-card">
-        <div class="card-header">
+      <div class="product-card" id="${cardId}">
+        <div class="card-header" onclick="document.getElementById('${cardId}').classList.toggle('card-collapsed')">
           <h3>#${i+1}  ${p.keyword}</h3>
           <span class="sr-badge">SR ${p.score.sr.toFixed(3)}</span>
           <span class="risk-badge ${riskCls}">${riskTxt}</span>
+          <span class="card-toggle">▼</span>
         </div>
+        <div class="card-body">
 
         <div class="rec-banner ${rec.level}">
           <div class="rec-icon">${recIcon}</div>
@@ -1167,7 +1171,7 @@ L = log₁₀(1 + 搜索结果数/1000)
           </div>
         </div>
 
-        ${renderDemandVideos(p)}
+        ${renderVideoCard(p.tiktok)}
 
         <div class="metrics-grid">
           <div class="metric"><div class="m-label">爆发倍数<span class="tip" data-tip="TikTok 视频爆发程度
@@ -1233,6 +1237,7 @@ L = log₁₀(1 + 搜索结果数/1000)
           <div class="ai-text">${p.aiInsight.actionPlan}</div>
           ${p.aiInsight.keyRisks?.length ? `<div class="risk-tags">${p.aiInsight.keyRisks.map(r=>`<span class="risk-tag">${r}</span>`).join('')}</div>` : ''}
         </div>` : ''}
+        </div>
       </div>`;
     });
 
