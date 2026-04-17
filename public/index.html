@@ -200,6 +200,38 @@
     .s-running { color: var(--text-muted); animation: blink 1.1s infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
 
+    /* 折叠步骤 */
+    .log-item.collapsible { cursor: pointer; user-select: none; }
+    .log-item.collapsible:hover { background: #1e2130; }
+    .log-item .collapse-icon {
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: transform .2s;
+      flex-shrink: 0;
+    }
+    .log-item.collapsed .collapse-icon { transform: rotate(-90deg); }
+
+    .detail-wrap { overflow: hidden; transition: max-height .25s ease; }
+    .detail-wrap.collapsed { max-height: 0 !important; }
+
+    /* TikTok 视频列表 */
+    .video-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .video-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border-radius: 5px;
+      padding: 6px 8px;
+      font-size: 11px;
+    }
+    .video-item img { width: 40px; height: 54px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+    .video-item .vi-info { flex: 1; min-width: 0; }
+    .video-item .vi-stats { display: flex; gap: 10px; flex-wrap: wrap; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .video-item .vi-stats span { white-space: nowrap; }
+    .video-item .vi-desc { color: var(--text-muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 2px; }
+    .video-item .vi-rank { font-size: 10px; font-weight: 700; color: var(--accent); min-width: 18px; text-align: center; }
+
     /* 进度详情通用容器 */
     .detail-box {
       background: #12151f;
@@ -852,7 +884,7 @@
   function handleSSE(event, data) {
     if (event === 'progress') {
       addLog(data);
-      const terminal = (data.status === 'done' && data.step === 4) ||
+      const terminal = (data.step === 4 && (data.status === 'done' || data.status === 'skipped')) ||
                        (data.status === 'skipped' && data.step === 1) ||
                        (data.status === 'error');
       if (terminal) { doneKeywords++; updateProgress(); }
@@ -874,7 +906,7 @@
     document.getElementById('progress-bar').style.width = pct + '%';
   }
 
-  function addLog({ keyword, step, stepName, status, message, tiktokDetail, amazonDetail, financial }) {
+  function addLog({ keyword, step, stepName, status, message, tiktokDetail, tiktokAllVideos, amazonDetail, financial }) {
     const list = document.getElementById('log-list');
     const id = `log-${keyword.replace(/\W+/g, '-')}-${step}`;
     let el = document.getElementById(id);
@@ -885,38 +917,43 @@
     }
 
     const icon = { done:'✓', error:'✗', skipped:'−', running:'…' }[status] ?? '?';
-    const headerLine = `<div class="log-item"><span class="log-kw">${keyword}</span><span class="log-step">[${step}/4] ${stepName}</span><span class="log-msg s-${status}">${icon}${message ? ' ' + message : ''}</span></div>`;
+    const hasDetail = (step === 1 && status === 'done' && tiktokAllVideos) ||
+                      (step === 2 && status === 'done' && amazonDetail) ||
+                      (step === 4 && status === 'done' && financial);
+    const collapseIcon = hasDetail ? '<span class="collapse-icon">▼</span>' : '';
+    const collapsibleCls = hasDetail ? ' collapsible' : '';
+    const headerLine = `<div class="log-item${collapsibleCls}" data-toggle="${id}-detail"><span class="log-kw">${keyword}</span><span class="log-step">[${step}/4] ${stepName}</span><span class="log-msg s-${status}">${icon}${message ? ' ' + message : ''}</span>${collapseIcon}</div>`;
 
-    // Step 1 完成：TikTok 抓取详情
-    if (step === 1 && status === 'done' && tiktokDetail) {
-      const d = tiktokDetail;
-      const daysAgo = Math.round((Date.now() - new Date(d.publishedAt).getTime()) / 86400000);
-      const coverHtml = d.coverUrl
-        ? `<a href="${d.videoUrl ?? '#'}" target="_blank" rel="noopener">
-             <img src="${d.coverUrl}" style="width:60px;height:80px;object-fit:cover;border-radius:5px;flex-shrink:0;display:block;" />
-           </a>`
-        : '';
-      el.innerHTML = headerLine + `
-        <div class="detail-box">
-          <div class="db-title">TikTok 最优信号${d.videoUrl ? ` · <a href="${d.videoUrl}" target="_blank" rel="noopener" style="color:var(--accent);">查看视频 ↗</a>` : ''}</div>
-          <div style="display:flex;gap:10px;align-items:flex-start;">
-            ${coverHtml}
-            <div style="flex:1;">
-              <div class="db-row">
-                <div class="db-cell"><div class="db-label">播放量</div><div class="db-value">${fmtNum(d.playCount)}</div></div>
-                <div class="db-cell"><div class="db-label">点赞数</div><div class="db-value">${fmtNum(d.diggCount)}</div></div>
-                <div class="db-cell"><div class="db-label">互动率<span class="tip" data-tip="公式：点赞数 ÷ 播放量
-只统计点赞，不含评论和分享
-点赞更直接反映购买意愿
-≥ 5% 时爆发倍数获得 1.5 倍加成">?</span></div><div class="db-value ${d.engagementRate >= 0.05 ? 'good' : ''}">${(d.engagementRate*100).toFixed(1)}%</div></div>
-                <div class="db-cell"><div class="db-label">爆发倍数<span class="tip" data-tip="TikTok 视频爆发程度
-公式：max(1, 播放量/100万 × 加成 × 10)
-互动率 ≥ 5% 时加成 1.5 倍
-10x 为满分，封顶不超过 1.0 分">?</span></div><div class="db-value good">${d.momentumMultiplier}x</div></div>
-                <div class="db-cell"><div class="db-label">作者粉丝</div><div class="db-value">${fmtNum(d.authorFollowers)}</div></div>
-                <div class="db-cell"><div class="db-label">发布时间</div><div class="db-value">${daysAgo} 天前</div></div>
-              </div>
+    // Step 1 完成：TikTok 全部视频
+    if (step === 1 && status === 'done' && tiktokAllVideos) {
+      const videos = tiktokAllVideos;
+      const videosHtml = videos.map((v, i) => {
+        const daysAgo = Math.round((Date.now() - new Date(v.publishedAt).getTime()) / 86400000);
+        const coverImg = v.coverUrl
+          ? `<a href="${v.videoUrl ?? '#'}" target="_blank" rel="noopener"><img src="${v.coverUrl}" /></a>`
+          : '';
+        return `<div class="video-item">
+          <span class="vi-rank">#${i+1}</span>
+          ${coverImg}
+          <div class="vi-info">
+            <div class="vi-stats">
+              <span>▶ ${fmtNum(v.playCount)}</span>
+              <span>♥ ${fmtNum(v.diggCount)}</span>
+              <span>互动 ${(v.engagementRate*100).toFixed(1)}%</span>
+              <span>爆发 ${v.momentumMultiplier}x</span>
+              <span>粉丝 ${fmtNum(v.authorFollowers)}</span>
+              <span>${daysAgo}天前</span>
             </div>
+            ${v.videoUrl ? `<a href="${v.videoUrl}" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent);text-decoration:none;">查看视频 ↗</a>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+
+      el.innerHTML = headerLine + `
+        <div class="detail-wrap" id="${id}-detail">
+          <div class="detail-box">
+            <div class="db-title">TikTok 搜索结果 · 共 ${videos.length} 条视频（按爆发倍数排序）</div>
+            <div class="video-list">${videosHtml}</div>
           </div>
         </div>`;
 
@@ -936,40 +973,44 @@
           <span class="prod-price">$${p.price}</span>
         </div>`).join('');
       el.innerHTML = headerLine + `
-        <div class="detail-box">
-          <div class="db-title">Amazon 市场概况</div>
-          <div class="db-row">
-            <div class="db-cell"><div class="db-label">搜索结果</div><div class="db-value">${fmtNum(d.searchResults)}</div></div>
-            <div class="db-cell"><div class="db-label">饱和度<span class="tip" data-tip="Amazon 市场拥挤程度
+        <div class="detail-wrap" id="${id}-detail">
+          <div class="detail-box">
+            <div class="db-title">Amazon 市场概况</div>
+            <div class="db-row">
+              <div class="db-cell"><div class="db-label">搜索结果</div><div class="db-value">${fmtNum(d.searchResults)}</div></div>
+              <div class="db-cell"><div class="db-label">饱和度<span class="tip" data-tip="Amazon 市场拥挤程度
 公式：搜索结果数 ÷ 100,000
 10 万条结果 = 1.0 基准
 数值越低竞争越少
 超过 3.0 视为拥挤市场">?</span></div><div class="db-value ${satCls}">${d.saturationIndex.toFixed(2)}</div></div>
-            <div class="db-cell"><div class="db-label">竞品均分<span class="tip" data-tip="前 10 名竞品星级算术平均值
+              <div class="db-cell"><div class="db-label">竞品均分<span class="tip" data-tip="前 10 名竞品星级算术平均值
 满分 5.0
 低于 4.2 说明消费者整体不满意
 低于 4.2 时 AI 自动提炼改进痛点
 均分越低改进空间越大">?</span></div><div class="db-value ${ratingCls}">${d.avgRating.toFixed(1)} / 5.0${d.avgRating < 4.2 ? ' ⚠' : ''}</div></div>
+            </div>
+            <div class="db-title" style="margin-top:4px;">竞品 Top ${d.topProducts.length}</div>
+            <div class="db-products">${productsHtml}</div>
+            ${d.avgRating < 4.2 ? '<div class="fb-warning" style="margin-top:6px;">均分低于 4.2，AI 将自动提炼竞品负面痛点</div>' : ''}
           </div>
-          <div class="db-title" style="margin-top:4px;">竞品 Top ${d.topProducts.length}</div>
-          <div class="db-products">${productsHtml}</div>
-          ${d.avgRating < 4.2 ? '<div class="fb-warning" style="margin-top:6px;">均分低于 4.2，AI 将自动提炼竞品负面痛点</div>' : ''}
         </div>`;
 
-    // Step 3 完成：资金分配详情
-    } else if (step === 3 && status === 'done' && financial) {
+    // Step 4 完成：资金分配详情
+    } else if (step === 4 && status === 'done' && financial) {
       const riskColor = financial.capitalRiskFlag ? 'var(--error)' : 'var(--success)';
       const riskLabel = financial.capitalRiskFlag ? '⚠ 风险极高' : '✓ 风险可控';
       el.innerHTML = headerLine + `
-        <div class="finance-breakdown">
-          <div class="fb-row">
-            <div class="fb-cell"><div class="fb-label">采购 40%</div><div class="fb-value">$${financial.procurementBudget.toFixed(0)}</div></div>
-            <div class="fb-cell"><div class="fb-label">营销 30%</div><div class="fb-value">$${financial.marketingBudget.toFixed(0)}</div></div>
-            <div class="fb-cell"><div class="fb-label">备用金 30%</div><div class="fb-value">$${financial.reserveBudget.toFixed(0)}</div></div>
-            <div class="fb-cell"><div class="fb-label">建议采购量</div><div class="fb-value">${financial.suggestedOrderQty} 件</div></div>
-            <div class="fb-cell"><div class="fb-label">资金风险</div><div class="fb-value" style="color:${riskColor}">${riskLabel}</div></div>
+        <div class="detail-wrap" id="${id}-detail">
+          <div class="finance-breakdown">
+            <div class="fb-row">
+              <div class="fb-cell"><div class="fb-label">采购 40%</div><div class="fb-value">$${financial.procurementBudget.toFixed(0)}</div></div>
+              <div class="fb-cell"><div class="fb-label">营销 30%</div><div class="fb-value">$${financial.marketingBudget.toFixed(0)}</div></div>
+              <div class="fb-cell"><div class="fb-label">备用金 30%</div><div class="fb-value">$${financial.reserveBudget.toFixed(0)}</div></div>
+              <div class="fb-cell"><div class="fb-label">建议采购量</div><div class="fb-value">${financial.suggestedOrderQty} 件</div></div>
+              <div class="fb-cell"><div class="fb-label">资金风险</div><div class="fb-value" style="color:${riskColor}">${riskLabel}</div></div>
+            </div>
+            ${financial.capitalRiskFlag && financial.capitalRiskReason ? `<div class="fb-warning">${financial.capitalRiskReason}</div>` : ''}
           </div>
-          ${financial.capitalRiskFlag && financial.capitalRiskReason ? `<div class="fb-warning">${financial.capitalRiskReason}</div>` : ''}
         </div>`;
 
     // 其他步骤或状态：普通单行
@@ -979,6 +1020,17 @@
 
     list.scrollTop = list.scrollHeight;
   }
+
+  // 折叠/展开点击事件
+  document.addEventListener('click', e => {
+    const item = e.target.closest('.log-item.collapsible');
+    if (!item) return;
+    const targetId = item.dataset.toggle;
+    const detail = document.getElementById(targetId);
+    if (!detail) return;
+    item.classList.toggle('collapsed');
+    detail.classList.toggle('collapsed');
+  });
 
   function fmtNum(n) {
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';

@@ -56,6 +56,7 @@ export interface ProgressEvent {
   status: 'running' | 'done' | 'skipped' | 'error';
   message?: string;
   tiktokDetail?: TikTokDetail;
+  tiktokAllVideos?: TikTokDetail[];
   amazonDetail?: AmazonDetail;
   financial?: FinancialSummary;
 }
@@ -128,20 +129,23 @@ export class SpotterScanner {
       const topSignal = sorted[0];
       topSignal.keyword = keyword;
 
+      const toDetail = (v: TikTokSignal): TikTokDetail => ({
+        videoId: v.videoId,
+        playCount: v.playCount,
+        diggCount: v.diggCount,
+        engagementRate: v.engagementRate,
+        momentumMultiplier: v.momentumMultiplier,
+        authorFollowers: v.authorFollowers,
+        publishedAt: v.publishedAt,
+        videoUrl: v.videoUrl,
+        coverUrl: v.coverUrl,
+      });
+
       this.emit({
         keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'done',
-        message: `${allVideos.length} 条视频（未过滤，全部交给 AI 判定）`,
-        tiktokDetail: {
-          videoId: topSignal.videoId,
-          playCount: topSignal.playCount,
-          diggCount: topSignal.diggCount,
-          engagementRate: topSignal.engagementRate,
-          momentumMultiplier: topSignal.momentumMultiplier,
-          authorFollowers: topSignal.authorFollowers,
-          publishedAt: topSignal.publishedAt,
-          videoUrl: topSignal.videoUrl,
-          coverUrl: topSignal.coverUrl,
-        },
+        message: `${allVideos.length} 条视频（全部交给 AI 判定）`,
+        tiktokDetail: toDetail(topSignal),
+        tiktokAllVideos: sorted.map(toDetail),
       });
 
       // Step 2: Amazon Validation
