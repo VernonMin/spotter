@@ -996,12 +996,12 @@
               <div class="db-cell"><div class="db-label">竞品均分<span class="tip" data-tip="前 10 名竞品星级算术平均值
 满分 5.0
 低于 4.2 说明消费者整体不满意
-低于 4.2 时 AI 自动提炼改进痛点
+低于 4.2 时自动提炼改进痛点
 均分越低改进空间越大">?</span></div><div class="db-value ${ratingCls}">${d.avgRating.toFixed(1)} / 5.0${d.avgRating < 4.2 ? ' ⚠' : ''}</div></div>
             </div>
             <div class="db-title" style="margin-top:4px;">竞品 Top ${d.topProducts.length}</div>
             <div class="db-products">${productsHtml}</div>
-            ${d.avgRating < 4.2 ? '<div class="fb-warning" style="margin-top:6px;">均分低于 4.2，AI 将自动提炼竞品负面痛点</div>' : ''}
+            ${d.avgRating < 4.2 ? '<div class="fb-warning" style="margin-top:6px;">均分低于 4.2，将自动提炼竞品负面痛点</div>' : ''}
           </div>
         </div>`;
 
@@ -1182,7 +1182,7 @@ L = log₁₀(1 + 搜索结果数/1000)
           <div class="metric"><div class="m-label">竞品均分<span class="tip" data-tip="前 10 名竞品星级算术平均值
 满分 5.0
 低于 4.2 说明消费者整体不满意
-低于 4.2 时 AI 自动提炼改进痛点
+低于 4.2 时自动提炼改进痛点
 均分越低改进空间越大">?</span></div><div class="m-value">${p.amazon.avgRating.toFixed(1)}</div></div>
         </div>
 
@@ -1198,11 +1198,11 @@ L = log₁₀(1 + 搜索结果数/1000)
         ${p.aiInsight ? `
         ${p.aiInsight.hasDemand === false ? `
         <div class="warning-box" style="background:#2a0a0a;border-color:#5a1a1a;color:#fca5a5;margin-bottom:10px;">
-          ⚠️ AI 判定：该关键词在 TikTok 无明显商品购买需求<br/>
+          ⚠️ 该关键词在 TikTok 无明显商品购买需求<br/>
           <span style="font-size:11px;opacity:.8;">原因：${p.aiInsight.demandReason}</span>
         </div>` : ''}
         <div class="ai-box">
-          <div class="ai-box-title">决策卡片${p.aiInsight.hasDemand === false ? ' · AI 判定无商品需求' : ''}</div>
+          <div class="ai-box-title">决策卡片${p.aiInsight.hasDemand === false ? ' · 无商品需求' : ''}</div>
           <div class="ai-summary">${p.aiInsight.summary}</div>
           ${p.aiInsight.viralFeature ? `
           <div class="vf-box">
