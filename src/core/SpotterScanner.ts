@@ -54,6 +54,8 @@ export interface DemandDetail {
   demandReason: string;
   summary: string;
   viralFeature: string;
+  demandVideoCount?: number;
+  totalVideoCount?: number;
 }
 
 export interface ProgressEvent {
@@ -205,7 +207,10 @@ export class SpotterScanner {
       let aiInsight;
       try {
         aiInsight = await this.insight.generateInsight(tempProduct, allVideos);
-        const demandIcon = aiInsight.hasDemand ? '✓ 有商品需求' : '✗ 无明显商品需求';
+        const demandCount = aiInsight.demandVideoIndices.length;
+        const demandIcon = aiInsight.hasDemand
+          ? `✓ ${demandCount}/${allVideos.length} 条视频有商品需求`
+          : '✗ 无明显商品需求';
         this.emit({
           keyword, step: 3, stepName: '需求判定', status: 'done',
           message: demandIcon,
@@ -214,6 +219,8 @@ export class SpotterScanner {
             demandReason: aiInsight.demandReason,
             summary: aiInsight.summary,
             viralFeature: aiInsight.viralFeature,
+            demandVideoCount: demandCount,
+            totalVideoCount: allVideos.length,
           },
         });
       } catch (err) {
@@ -222,12 +229,25 @@ export class SpotterScanner {
         aiInsight = undefined;
       }
 
+      // 根据 AI 标记的商品视频，选出真正的 topSignal
+      let demandVideos: TikTokSignal[] = [];
+      if (aiInsight?.demandVideoIndices?.length) {
+        demandVideos = aiInsight.demandVideoIndices
+          .map(i => allVideos[i - 1]) // 1-based → 0-based
+          .filter(Boolean);
+      }
+      // 如果 AI 标记了商品视频，用最优商品视频替换 topSignal
+      const bestSignal = demandVideos.length > 0
+        ? [...demandVideos].sort((a, b) => b.momentumMultiplier - a.momentumMultiplier)[0]
+        : topSignal; // AI 失败或无标记时回退到原始最优
+      bestSignal.keyword = keyword;
+
       // Step 4: SR 评分 & 资金适配
       const hasDemand = aiInsight?.hasDemand ?? true; // AI 失败时默认有需求
 
       if (hasDemand) {
         this.emit({ keyword, step: 4, stepName: 'SR 评分 & 资金适配', status: 'running' });
-        const score = calcSpotterRank(topSignal, amazonMetrics);
+        const score = calcSpotterRank(bestSignal, amazonMetrics);
         this.emit({
           keyword, step: 4, stepName: 'SR 评分 & 资金适配', status: 'done',
           message: `SR=${score.sr.toFixed(3)}  风险=${financial.capitalRiskFlag ? '⚠️极高' : '✅可控'}`,
@@ -244,6 +264,8 @@ export class SpotterScanner {
 
         const product: StandardProduct = {
           ...tempProduct,
+          tiktok: bestSignal,
+          tiktokDemandVideos: demandVideos.length > 0 ? demandVideos : undefined,
           score,
           recommendation: getRecommendation(score.sr),
           aiInsight,
@@ -253,7 +275,7 @@ export class SpotterScanner {
         // AI 判定无需求 → 跳过 SR 评分
         this.emit({
           keyword, step: 4, stepName: 'SR 评分 & 资金适配', status: 'skipped',
-          message: `AI 判定无商品需求：${aiInsight?.demandReason ?? ''}`,
+          message: `无商品需求：${aiInsight?.demandReason ?? ''}`,
         });
 
         const product: StandardProduct = {

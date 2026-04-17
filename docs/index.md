@@ -93,8 +93,10 @@
 
 | 字段名 | 展示位置 | 计算公式 |
 |--------|---------|---------|
-| `aiInsight.hasDemand` | 结果·需求判定标记 / 推荐横幅 | DeepSeek-V3 综合全部 20 条 TikTok 视频 + Amazon 数据判定，布尔值 |
+| `aiInsight.hasDemand` | 结果·需求判定标记 / 推荐横幅 | 由 `demandVideoIndices` 是否为空决定：非空=true，空=false |
 | `aiInsight.demandReason` | 结果·需求判定原因（hasDemand=false 时显示为警告框） | DeepSeek-V3 生成，50字以内 |
+| `aiInsight.demandVideoIndices` | 需求判定详情·视频计数 | AI 逐条标记的商品需求视频序号（1-based），决定 hasDemand 及 SR 评分使用的视频 |
+| `tiktokDemandVideos` | 结果·商品需求视频列表 | AI 标记的所有商品视频，按爆发倍数排序，第一条用于 SR 评分 |
 | `aiInsight.viralFeature` | 结果·AI卡片·爆发功能点 | DeepSeek-V3 综合全部视频文案/标签 + Top5 竞品标题推断，50字以内 |
 | `aiInsight.summary` | 结果·AI卡片·摘要 | DeepSeek-V3 生成，50字以内一句话总结 |
 | `aiInsight.differentiationStrategy` | 结果·AI卡片·差异化策略 | DeepSeek-V3 生成，100字以内 |

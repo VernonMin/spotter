@@ -1012,7 +1012,10 @@
       const verdictBg = dd.hasDemand ? '#1a2a0a' : '#2a0a0a';
       const verdictBorder = dd.hasDemand ? '#3a5a1a' : '#5a1a1a';
       const verdictIcon = dd.hasDemand ? '✓' : '✗';
-      const verdictText = dd.hasDemand ? '有商品需求' : '无明显商品需求';
+      const videoCountText = dd.demandVideoCount != null && dd.totalVideoCount != null
+        ? ` · ${dd.demandVideoCount}/${dd.totalVideoCount} 条视频`
+        : '';
+      const verdictText = dd.hasDemand ? `有商品需求${videoCountText}` : '无明显商品需求';
       el.innerHTML = headerLine + `
         <div class="detail-wrap" id="${id}-detail">
           <div class="detail-box" style="border-color:${verdictBorder};background:${verdictBg};">
@@ -1136,15 +1139,31 @@ L = log₁₀(1 + 搜索结果数/1000)
           </div>
         </div>
 
-        ${p.tiktok.coverUrl ? `
-        <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-          <a href="${p.tiktok.videoUrl ?? '#'}" target="_blank" rel="noopener">
-            <img src="${p.tiktok.coverUrl}" style="width:48px;height:64px;object-fit:cover;border-radius:6px;" />
-          </a>
-          <div style="font-size:12px;color:var(--text-muted);">
-            TikTok 最优信号 · <a href="${p.tiktok.videoUrl}" target="_blank" rel="noopener" style="color:var(--accent);">查看视频 ↗</a>
-          </div>
-        </div>` : ''}
+        ${(() => {
+          const demandVids = p.tiktokDemandVideos ?? (p.tiktok.coverUrl ? [p.tiktok] : []);
+          if (demandVids.length === 0) return '';
+          const label = p.tiktokDemandVideos ? \`商品需求视频 · \${demandVids.length} 条\` : 'TikTok 最优信号';
+          const vidsHtml = demandVids.map(v => {
+            const daysAgo = Math.round((Date.now() - new Date(v.publishedAt).getTime()) / 86400000);
+            return \`<div class="video-item">
+              \${v.coverUrl ? \`<a href="\${v.videoUrl ?? '#'}" target="_blank" rel="noopener"><img src="\${v.coverUrl}" /></a>\` : ''}
+              <div class="vi-info">
+                <div class="vi-stats">
+                  <span>▶ \${fmtNum(v.playCount)}</span>
+                  <span>♥ \${fmtNum(v.diggCount)}</span>
+                  <span>互动 \${(v.engagementRate*100).toFixed(1)}%</span>
+                  <span>爆发 \${v.momentumMultiplier}x</span>
+                  <span>\${daysAgo}天前</span>
+                </div>
+                \${v.videoUrl ? \`<a href="\${v.videoUrl}" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent);text-decoration:none;">查看视频 ↗</a>\` : ''}
+              </div>
+            </div>\`;
+          }).join('');
+          return \`<div style="margin-bottom:12px;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-weight:600;">\${label}</div>
+            <div class="video-list">\${vidsHtml}</div>
+          </div>\`;
+        })()}
 
         <div class="metrics-grid">
           <div class="metric"><div class="m-label">爆发倍数<span class="tip" data-tip="TikTok 视频爆发程度

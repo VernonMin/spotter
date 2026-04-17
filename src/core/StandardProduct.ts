@@ -76,6 +76,7 @@ export interface StandardProduct {
   category: string;
 
   tiktok: TikTokSignal;
+  tiktokDemandVideos?: TikTokSignal[];  // AI 标记的所有商品需求视频
   amazon: AmazonMetrics;
   financial: FinancialProfile;
   score: SpotterScore;
@@ -89,6 +90,7 @@ export interface StandardProduct {
 export interface AIInsight {
   hasDemand: boolean;              // AI 判定：TikTok 视频是否反映真实商品购买需求
   demandReason: string;            // AI 判定理由
+  demandVideoIndices: number[];    // AI 标记的商品需求视频序号（1-based）
   viralFeature: string;            // 爆发功能点：一句话说明该品为何爆发
   differentiationStrategy: string;
   keyRisks: string[];

@@ -64,9 +64,13 @@ ${financial.capitalRiskReason ? `- **风险原因**：${financial.capitalRiskRea
 ${needsPainPoints ? `## 竞品负面评价分析\n请从评分偏低（${amazon.avgRating.toFixed(2)}分）的情况出发，提炼 2~3 个消费者痛点，这些痛点是产品差异化的切入口。` : ''}
 
 ## 第一步：需求判定
-请分析以上 ${allVideos.length} 条 TikTok 视频，判断：
-1. 这些视频是否反映了对"${keyword}"相关商品的真实购买需求？（例如：开箱、测评、推荐、试用等商品内容）
-2. 还是大部分只是生活/娱乐内容，碰巧与关键词相关？（例如：搞笑、舞蹈、日常记录等）
+请逐条分析以上 ${allVideos.length} 条 TikTok 视频，判断每条视频是否反映了对"${keyword}"相关商品的真实购买需求。
+- 商品需求视频特征：开箱、测评、推荐、试用、购物分享、商品展示等
+- 非商品视频特征：搞笑、舞蹈、日常记录、生活分享等碰巧含关键词的内容
+
+请在 demandVideoIndices 中列出所有属于商品需求的视频序号（即上方列表中的编号，从 1 开始）。
+- 如果没有任何商品需求视频，demandVideoIndices 为空数组，hasDemand 为 false。
+- 如果有至少 1 条商品需求视频，hasDemand 为 true。
 
 ## 第二步：决策卡片
 无论需求判定结果如何，都请生成完整的 JSON 输出。
@@ -76,6 +80,7 @@ ${needsPainPoints ? `## 竞品负面评价分析\n请从评分偏低（${amazon.
 {
   "hasDemand": true或false,
   "demandReason": "需求判定的一句话理由，50字以内",
+  "demandVideoIndices": [1, 5, 12],
   "viralFeature": "一句话，50字以内，说明该产品为什么会在 TikTok 爆发，核心是哪个功能或卖点触发了传播",
   "differentiationStrategy": "一段话，100字以内，说明如何差异化切入该市场",
   "keyRisks": ["风险1", "风险2", "风险3"],
@@ -94,14 +99,21 @@ ${needsPainPoints ? `## 竞品负面评价分析\n请从评分偏低（${amazon.
 
     try {
       const parsed = JSON.parse(content) as AIInsight;
-      // 确保 hasDemand 是布尔值
+      // 确保字段类型正确
       parsed.hasDemand = !!parsed.hasDemand;
       parsed.demandReason = parsed.demandReason || '';
+      parsed.demandVideoIndices = Array.isArray(parsed.demandVideoIndices)
+        ? parsed.demandVideoIndices.filter(i => typeof i === 'number')
+        : [];
+      // 如果标记了视频但 hasDemand 是 false，以视频列表为准
+      if (parsed.demandVideoIndices.length > 0) parsed.hasDemand = true;
+      if (parsed.demandVideoIndices.length === 0) parsed.hasDemand = false;
       return parsed;
     } catch {
       return {
         hasDemand: false,
         demandReason: 'AI 输出解析失败',
+        demandVideoIndices: [],
         viralFeature: '',
         differentiationStrategy: content,
         keyRisks: [],
