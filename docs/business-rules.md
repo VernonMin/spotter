@@ -285,3 +285,4 @@ GET https://serpapi.com/search.json
 | v2 | 2026-04-17 | TikTok信号 | 新增 videoUrl（视频链接）、coverUrl（封面图）字段 |
 | v2 | 2026-04-17 | Amazon验证 | 新增 imageUrl（商品图）、productUrl（amazon.com/dp/ASIN）字段 |
 | v2 | 2026-04-17 | Amazon验证 | 补充饱和度和竞品均分的计算说明 |
+| v1 | 2026-04-17 | 页面交互 | TikTok 步骤展示全部搜索视频列表；各步骤详情区域支持点击折叠/展开 |

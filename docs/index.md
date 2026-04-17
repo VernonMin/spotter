@@ -142,3 +142,4 @@
 | 2026-04-17 | TikTok信号 / AI卡片 | 新增 videoDesc、hashtags 字段；新增第6节 AI 决策卡片字段（含 viralFeature） |
 | 2026-04-17 | TikTok信号 / Amazon竞品 | 补充 engagementRate 计算说明（只含点赞）；补充 topProducts[].rating 来源说明 |
 | 2026-04-17 | TikTok信号 / AI卡片 | 架构重构：取消客户端商业意图过滤，改由 AI 判定需求；新增 hasDemand、demandReason 字段；AI 输入从 1 条视频改为全部 20 条 |
+| 2026-04-17 | 页面交互 | TikTok 步骤展示全部搜索视频（封面、播放量、互动率、爆发倍数等）；各步骤详情支持点击折叠/展开 |
