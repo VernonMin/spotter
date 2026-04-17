@@ -288,7 +288,7 @@ export class SpotterScanner {
         const bestSr = srScores.reduce((a, b) => a.score.sr > b.score.sr ? a : b);
         this.emit({
           keyword, step: 4, stepName: 'SR 评分 & 资金适配', status: 'done',
-          message: `${videosToScore.length} 条视频评分，最高 SR=${bestSr.score.sr.toFixed(3)}  风险=${financial.capitalRiskFlag ? '⚠️极高' : '✅可控'}`,
+          message: `${videosToScore.length} 条视频评分，最高 SR=${bestSr.score.sr.toFixed(3)}`,
           financial: {
             totalBudget: financial.totalBudget,
             procurementBudget: financial.procurementBudget,
@@ -296,7 +296,6 @@ export class SpotterScanner {
             reserveBudget: financial.reserveBudget,
             suggestedOrderQty: financial.suggestedOrderQty,
             capitalRiskFlag: financial.capitalRiskFlag,
-            capitalRiskReason: financial.capitalRiskReason,
           },
         });
 

@@ -1044,10 +1044,8 @@
           </div>
         </div>`;
 
-    // Step 4 完成：资金分配详情
+    // Step 4 完成：资金分配详情（不展示风险提示，结果卡片里已有）
     } else if (step === 4 && status === 'done' && financial) {
-      const riskColor = financial.capitalRiskFlag ? 'var(--error)' : 'var(--success)';
-      const riskLabel = financial.capitalRiskFlag ? '⚠ 风险极高' : '✓ 风险可控';
       el.innerHTML = headerLine + `
         <div class="detail-wrap" id="${id}-detail">
           <div class="finance-breakdown">
@@ -1056,9 +1054,7 @@
               <div class="fb-cell"><div class="fb-label">营销 30%</div><div class="fb-value">$${financial.marketingBudget.toFixed(0)}</div></div>
               <div class="fb-cell"><div class="fb-label">备用金 30%</div><div class="fb-value">$${financial.reserveBudget.toFixed(0)}</div></div>
               <div class="fb-cell"><div class="fb-label">建议采购量</div><div class="fb-value">${financial.suggestedOrderQty} 件</div></div>
-              <div class="fb-cell"><div class="fb-label">资金风险</div><div class="fb-value" style="color:${riskColor}">${riskLabel}</div></div>
             </div>
-            ${financial.capitalRiskFlag && financial.capitalRiskReason ? `<div class="fb-warning">${financial.capitalRiskReason}</div>` : ''}
           </div>
         </div>`;
 
