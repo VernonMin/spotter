@@ -37,7 +37,7 @@ export class TikHubAdapter {
       : f.publishTimeDays <= 7 ? 7
       : f.publishTimeDays <= 30 ? 30
       : 0;
-    const url = `${baseUrl}/api/v1/tiktok/app/v3/fetch_video_search_result?keyword=${encodeURIComponent(keyword)}&count=20&publish_time=${publishTime}&sort_type=1&region=US`;
+    const url = `${baseUrl}/api/v1/tiktok/app/v3/fetch_video_search_result?keyword=${encodeURIComponent(keyword)}&count=20&publish_time=${publishTime}&sort_type=0&region=US`;
 
     const res = await fetch(url, {
       headers: {

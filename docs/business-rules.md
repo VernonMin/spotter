@@ -199,7 +199,7 @@ if (落地成本 × 300 > 采购预算) → 标记「资金风险极高」
 #### TikHub API 接口
 ```
 GET /api/v1/tiktok/app/v3/fetch_video_search_result
-参数：keyword, count=20, publish_time=7, sort_type=1（最多点赞）, region=US
+参数：keyword, count=20, publish_time=7, sort_type=0（最新发布）, region=US
 ```
 
 #### 返回字段
@@ -300,6 +300,7 @@ GET https://serpapi.com/search.json
 | v2 | 2026-04-17 | TikTok信号 | 新增 requireCommercialSignal 过滤器（默认开启），过滤生活/娱乐类无商业意图视频 |
 | v3 | 2026-04-17 | TikTok信号 | 修复商业过滤无效问题：改为双重检查（关键词存在 + 商业信号词），收窄信号词表避免 #shop/#link 泛化词误判 |
 | v4 | 2026-04-17 | TikTok信号 | 修复关键词拆词误匹配：改为完整短语匹配，"tea cup" 不再因含 "tea" 而匹配奶茶视频 |
+| v5 | 2026-04-17 | TikTok信号 | 搜索排序由 sort_type=1（热度）改为 sort_type=0（最新）；原因：热度排序导致老病毒视频霸占结果，新兴商品信号无法进入，与捕捉早期趋势的目标相悖 |
 | v1 | 2026-04-17 | SR推荐等级 | 新增 4 档推荐等级：strong/consider/caution/avoid，阈值 0.75/0.55/0.35 |
 | v2 | 2026-04-17 | TikTok信号 | 新增 videoUrl（视频链接）、coverUrl（封面图）字段 |
 | v2 | 2026-04-17 | Amazon验证 | 新增 imageUrl（商品图）、productUrl（amazon.com/dp/ASIN）字段 |
