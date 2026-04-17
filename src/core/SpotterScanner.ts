@@ -3,7 +3,7 @@ import { AmazonAdapter } from '../adapters/AmazonAdapter';
 import { InsightEngine } from '../ai/InsightEngine';
 import { calcSpotterRank, getRecommendation } from './SpotterRank';
 import { calcFinancialProfile } from './FinancialEngine';
-import { StandardProduct, ScanInput, TikTokSignal } from './StandardProduct';
+import { StandardProduct, ScanInput, TikTokSignal, FilterConfig, DEFAULT_FILTER } from './StandardProduct';
 
 interface SpotterScannerConfig {
   tikhubApiKey: string;
@@ -66,6 +66,7 @@ export interface ProgressEvent {
   message?: string;
   tiktokDetail?: TikTokDetail;
   tiktokAllVideos?: TikTokDetail[];
+  tiktokFilteredCount?: number;
   amazonDetail?: AmazonDetail;
   financial?: FinancialSummary;
   demandDetail?: DemandDetail;
@@ -111,7 +112,8 @@ export class SpotterScanner {
     const { totalBudget, category, keywords, platform } = input;
     const results: StandardProduct[] = [];
     const categoryLabel = category?.trim() || '全品类';
-    const publishTimeDays = input.filter?.publishTimeDays ?? 7;
+    const filterConfig: FilterConfig = { ...DEFAULT_FILTER, ...input.filter };
+    const publishTimeDays = filterConfig.publishTimeDays;
 
     console.log(`\n🔍 开始扫描 [${platform.toUpperCase()}] 品类：${categoryLabel}，预算：$${totalBudget.toLocaleString()}`);
     console.log(`📋 关键词列表：${keywords.join(', ')}\n`);
@@ -134,6 +136,16 @@ export class SpotterScanner {
         continue;
       }
 
+      // 应用过滤条件
+      const filteredVideos = allVideos.filter(v => {
+        const cutoff = Date.now() - filterConfig.publishTimeDays * 24 * 60 * 60 * 1000;
+        const publishedRecently = new Date(v.publishedAt).getTime() >= cutoff;
+        return v.authorFollowers <= filterConfig.maxAuthorFollowers &&
+               v.playCount >= filterConfig.minPlayCount &&
+               v.engagementRate >= filterConfig.minEngagementRate &&
+               publishedRecently;
+      });
+
       // 按爆发倍数排序，取最优视频用于展示
       const sorted = [...allVideos].sort((a, b) => b.momentumMultiplier - a.momentumMultiplier);
       const topSignal = sorted[0];
@@ -151,11 +163,16 @@ export class SpotterScanner {
         coverUrl: v.coverUrl,
       });
 
+      const filterMsg = filteredVideos.length < allVideos.length
+        ? `${allVideos.length} 条视频（过滤后 ${filteredVideos.length} 条）`
+        : `${allVideos.length} 条视频`;
+
       this.emit({
         keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'done',
-        message: `${allVideos.length} 条视频`,
+        message: filterMsg,
         tiktokDetail: toDetail(topSignal),
         tiktokAllVideos: sorted.map(toDetail),
+        tiktokFilteredCount: filteredVideos.length,
       });
 
       // Step 2: Amazon Validation
@@ -189,6 +206,9 @@ export class SpotterScanner {
       // 先计算资金（AI prompt 需要用到）
       const financial = calcFinancialProfile(totalBudget, amazonMetrics.topProducts, categoryLabel);
 
+      // 传给 AI 的视频：过滤后有结果则用过滤后，否则回退到全部
+      const videosForAI = filteredVideos.length > 0 ? filteredVideos : allVideos;
+
       // Step 3: 需求判定 + 决策卡片（守门人）
       this.emit({ keyword, step: 3, stepName: '需求判定', status: 'running' });
 
@@ -206,10 +226,10 @@ export class SpotterScanner {
 
       let aiInsight;
       try {
-        aiInsight = await this.insight.generateInsight(tempProduct, allVideos);
+        aiInsight = await this.insight.generateInsight(tempProduct, videosForAI);
         const demandCount = aiInsight.demandVideoIndices.length;
         const demandIcon = aiInsight.hasDemand
-          ? `✓ ${demandCount}/${allVideos.length} 条视频有商品需求`
+          ? `✓ ${demandCount}/${videosForAI.length} 条视频有商品需求`
           : '✗ 无明显商品需求';
         this.emit({
           keyword, step: 3, stepName: '需求判定', status: 'done',
@@ -220,7 +240,7 @@ export class SpotterScanner {
             summary: aiInsight.summary,
             viralFeature: aiInsight.viralFeature,
             demandVideoCount: demandCount,
-            totalVideoCount: allVideos.length,
+            totalVideoCount: videosForAI.length,
           },
         });
       } catch (err) {
@@ -233,7 +253,7 @@ export class SpotterScanner {
       let demandVideos: TikTokSignal[] = [];
       if (aiInsight?.demandVideoIndices?.length) {
         demandVideos = aiInsight.demandVideoIndices
-          .map(i => allVideos[i - 1]) // 1-based → 0-based
+          .map(i => videosForAI[i - 1]) // 1-based → 0-based
           .filter(Boolean);
       }
       // 如果 AI 标记了商品视频，用最优商品视频替换 topSignal
