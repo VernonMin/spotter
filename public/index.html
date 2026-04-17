@@ -621,9 +621,9 @@
         <div class="filter-item">
           <div class="filter-label">
             最低播放量
-            <span class="def">默认 100,000</span>
+            <span class="def">默认 10,000</span>
           </div>
-          <input id="f-plays" type="number" placeholder="100000" />
+          <input id="f-plays" type="number" placeholder="10000" />
         </div>
         <div class="filter-item">
           <div class="filter-label">
@@ -792,7 +792,7 @@
   // 默认值常量（与后端 DEFAULT_FILTER 保持一致）
   const DEFAULTS = {
     maxAuthorFollowers: 100000,
-    minPlayCount: 100000,
+    minPlayCount: 10000,
     minEngagementRate: 2,     // 页面单位 %，后端换算 /100
     publishTimeDays: 15,
   };
