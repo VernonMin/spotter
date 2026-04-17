@@ -868,9 +868,18 @@
               if (l.startsWith('event: ')) event = l.slice(7);
               if (l.startsWith('data: ')) data = l.slice(6);
             });
-            if (event && data) handleSSE(event, JSON.parse(data));
+            if (event && data) {
+              try {
+                handleSSE(event, JSON.parse(data));
+              } catch (err) {
+                console.error('SSE handle error:', event, err);
+              }
+            }
           });
           pump();
+        }).catch(err => {
+          console.error('SSE read error:', err);
+          document.getElementById('btn-scan').disabled = false;
         });
       }
       pump();
