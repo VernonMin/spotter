@@ -31,7 +31,7 @@
 | `coverUrl` | 进度·封面图 / 结果·封面图 | API 原始值：`video.cover.url_list[0]` |
 | `videoDesc` | 不直接展示，传给 AI | API 原始值：`desc`（视频文案） |
 | `hashtags` | 不直接展示，传给 AI | API 原始值：`text_extra[].hashtag_name` 过滤空值后组成数组 |
-| `videoDesc` + `hashtags` 商业检查 | 不展示（过滤逻辑） | `requireCommercialSignal=true` 时执行双重检查：① text 包含完整关键词短语（或去空格形式，如 "tea cup" 或 "teacup"）② text 包含任意商业信号词；无文案时放行 |
+| `videoDesc` + `hashtags`（全部视频） | 不展示（传给 AI） | 全部 20 条视频的文案和标签，不做客户端过滤，交给 AI 综合判定是否存在真实商品购买需求 |
 
 ---
 
@@ -87,13 +87,15 @@
 
 ---
 
-## 6. AI 决策卡片字段
+## 6. AI 需求判定 + 决策卡片字段
 
 **来源文件**：`src/ai/InsightEngine.ts`
 
 | 字段名 | 展示位置 | 计算公式 |
 |--------|---------|---------|
-| `aiInsight.viralFeature` | 结果·AI卡片·爆发功能点 | DeepSeek-V3 综合 `videoDesc` + `hashtags` + Top5 竞品标题推断，50字以内 |
+| `aiInsight.hasDemand` | 结果·需求判定标记 / 推荐横幅 | DeepSeek-V3 综合全部 20 条 TikTok 视频 + Amazon 数据判定，布尔值 |
+| `aiInsight.demandReason` | 结果·需求判定原因（hasDemand=false 时显示为警告框） | DeepSeek-V3 生成，50字以内 |
+| `aiInsight.viralFeature` | 结果·AI卡片·爆发功能点 | DeepSeek-V3 综合全部视频文案/标签 + Top5 竞品标题推断，50字以内 |
 | `aiInsight.summary` | 结果·AI卡片·摘要 | DeepSeek-V3 生成，50字以内一句话总结 |
 | `aiInsight.differentiationStrategy` | 结果·AI卡片·差异化策略 | DeepSeek-V3 生成，100字以内 |
 | `aiInsight.actionPlan` | 结果·AI卡片·行动建议 | DeepSeek-V3 生成，150字以内，含选品/定价/营销方向 |
@@ -139,3 +141,4 @@
 | 2026-04-17 | 全部 | 初始版本，梳理页面所有字段及完整计算公式 |
 | 2026-04-17 | TikTok信号 / AI卡片 | 新增 videoDesc、hashtags 字段；新增第6节 AI 决策卡片字段（含 viralFeature） |
 | 2026-04-17 | TikTok信号 / Amazon竞品 | 补充 engagementRate 计算说明（只含点赞）；补充 topProducts[].rating 来源说明 |
+| 2026-04-17 | TikTok信号 / AI卡片 | 架构重构：取消客户端商业意图过滤，改由 AI 判定需求；新增 hasDemand、demandReason 字段；AI 输入从 1 条视频改为全部 20 条 |

@@ -87,6 +87,8 @@ export interface StandardProduct {
 }
 
 export interface AIInsight {
+  hasDemand: boolean;              // AI 判定：TikTok 视频是否反映真实商品购买需求
+  demandReason: string;            // AI 判定理由
   viralFeature: string;            // 爆发功能点：一句话说明该品为何爆发
   differentiationStrategy: string;
   keyRisks: string[];
@@ -99,7 +101,6 @@ export interface FilterConfig {
   minPlayCount: number;            // 最低播放量，默认 100,000
   minEngagementRate: number;       // 最低互动率（digg/play），默认 0.03 = 3%
   publishTimeDays: number;         // 只看最近 N 天内发布的视频，默认 7
-  requireCommercialSignal: boolean; // 要求视频含商业意图信号词，默认 true
 }
 
 export const DEFAULT_FILTER: FilterConfig = {
@@ -107,7 +108,6 @@ export const DEFAULT_FILTER: FilterConfig = {
   minPlayCount: 100_000,
   minEngagementRate: 0.03,
   publishTimeDays: 7,
-  requireCommercialSignal: true,
 };
 
 export type SocialPlatform = 'tiktok'; // 后续扩展：'instagram' | 'youtube' | 'xiaohongshu'

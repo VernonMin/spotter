@@ -25,17 +25,29 @@ export class TikHubAdapter {
   async fetchSignals(keyword: string, filter?: Partial<FilterConfig>): Promise<TikTokSignal[]> {
     const f: FilterConfig = { ...DEFAULT_FILTER, ...filter };
     if (this.config.apiKey && this.config.apiKey !== 'MOCK') {
-      return this.fetchReal(keyword, f);
+      const all = await this.fetchFromApi(keyword, f.publishTimeDays);
+      return all.filter((s) => this.applyFilters(s, f));
     }
     return this.fetchMock(keyword);
   }
 
-  private async fetchReal(keyword: string, f: FilterConfig): Promise<TikTokSignal[]> {
+  /**
+   * 获取所有 TikTok 搜索结果（不做客户端过滤）
+   * 用于将全部视频传给 AI 进行需求判定
+   */
+  async fetchAllSignals(keyword: string, publishTimeDays?: number): Promise<TikTokSignal[]> {
+    if (this.config.apiKey && this.config.apiKey !== 'MOCK') {
+      return this.fetchFromApi(keyword, publishTimeDays ?? 7);
+    }
+    return this.fetchMock(keyword);
+  }
+
+  private async fetchFromApi(keyword: string, publishTimeDays: number): Promise<TikTokSignal[]> {
     const baseUrl = this.config.baseUrl ?? 'https://api.tikhub.io';
     // publish_time 映射：7 天内 → 7，其他值用最近一个月兜底
-    const publishTime = f.publishTimeDays <= 1 ? 1
-      : f.publishTimeDays <= 7 ? 7
-      : f.publishTimeDays <= 30 ? 30
+    const publishTime = publishTimeDays <= 1 ? 1
+      : publishTimeDays <= 7 ? 7
+      : publishTimeDays <= 30 ? 30
       : 0;
     const url = `${baseUrl}/api/v1/tiktok/app/v3/fetch_video_search_result?keyword=${encodeURIComponent(keyword)}&count=20&publish_time=${publishTime}&sort_type=0&region=US`;
 
@@ -53,9 +65,7 @@ export class TikHubAdapter {
     const body = await res.json() as TikHubResponse;
     const searchItems = body?.data?.search_item_list ?? [];
 
-    return searchItems
-      .map((item) => this.normalize(item.aweme_info, keyword))
-      .filter((s) => this.applyFilters(s, f));
+    return searchItems.map((item) => this.normalize(item.aweme_info, keyword));
   }
 
   private normalize(v: RawTikTokVideo, keyword: string): TikTokSignal {
@@ -137,7 +147,6 @@ export class TikHubAdapter {
       signal.engagementRate < f.minEngagementRate ||
       !publishedRecently
     ) return false;
-    if (f.requireCommercialSignal && !this.hasCommercialSignal(signal, signal.keyword)) return false;
     return true;
   }
 

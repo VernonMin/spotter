@@ -602,17 +602,6 @@
       </div>
     </div>
 
-    <div class="form-section" style="margin-bottom:14px;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-muted);">
-        <input type="checkbox" id="f-commercial" checked style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;" />
-        <span>仅保留商品相关视频</span>
-        <span class="tip" data-tip="过滤掉生活类/娱乐类无关视频
-只保留文案或标签含商业信号词的视频
-如：review / haul / shop / amazon
-unbox / tryon / recommend 等">?</span>
-      </label>
-    </div>
-
     <button class="btn-scan" id="btn-scan" onclick="startScan()">开始扫描</button>
 
   </div>
@@ -766,7 +755,6 @@ unbox / tryon / recommend 等">?</span>
     minPlayCount: 100000,
     minEngagementRate: 3,     // 页面单位 %，后端换算 /100
     publishTimeDays: 7,
-    requireCommercialSignal: true,
   };
 
   let totalKeywords = 0;
@@ -806,7 +794,6 @@ unbox / tryon / recommend 等">?</span>
       minPlayCount: getFilterValue('f-plays', DEFAULTS.minPlayCount),
       minEngagementRate: getFilterValue('f-engagement', DEFAULTS.minEngagementRate) / 100,
       publishTimeDays: getFilterValue('f-days', DEFAULTS.publishTimeDays),
-      requireCommercialSignal: document.getElementById('f-commercial').checked,
     };
 
     totalKeywords = keywords.length;
@@ -1096,8 +1083,13 @@ L = log₁₀(1 + 搜索结果数/1000)
         ${p.financial.capitalRiskFlag ? `<div class="warning-box">⚠️ ${p.financial.capitalRiskReason}</div>` : ''}
 
         ${p.aiInsight ? `
+        ${p.aiInsight.hasDemand === false ? `
+        <div class="warning-box" style="background:#2a0a0a;border-color:#5a1a1a;color:#fca5a5;margin-bottom:10px;">
+          ⚠️ AI 判定：该关键词在 TikTok 无明显商品购买需求<br/>
+          <span style="font-size:11px;opacity:.8;">原因：${p.aiInsight.demandReason}</span>
+        </div>` : ''}
         <div class="ai-box">
-          <div class="ai-box-title">决策卡片</div>
+          <div class="ai-box-title">决策卡片${p.aiInsight.hasDemand === false ? ' · AI 判定无商品需求' : ''}</div>
           <div class="ai-summary">${p.aiInsight.summary}</div>
           ${p.aiInsight.viralFeature ? `
           <div class="vf-box">

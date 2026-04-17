@@ -65,7 +65,13 @@ type ProgressCallback = (event: ProgressEvent) => void;
 /**
  * SpotterScanner — 主流程编排器
  *
- * Discovery(TikTok) -> Filter(Budget) -> Validation(Amazon) -> Insight(LLM)
+ * v2 流程：
+ * Discovery(TikTok, 不过滤) -> Validation(Amazon) -> AI 需求判定 + 决策卡片 -> SR 评分 & 资金适配
+ *
+ * 核心变化：AI 从最后一步提前到第三步作为"守门人"
+ * - TikTok 不再做客户端过滤，全部 20 条视频交给 AI 判断
+ * - AI 判定是否存在真实商品购买需求
+ * - 仅在 AI 确认有需求时才执行 SR 评分
  */
 export class SpotterScanner {
   private tiktok: TikHubAdapter;
@@ -94,6 +100,7 @@ export class SpotterScanner {
     const { totalBudget, category, keywords, platform } = input;
     const results: StandardProduct[] = [];
     const categoryLabel = category?.trim() || '全品类';
+    const publishTimeDays = input.filter?.publishTimeDays ?? 7;
 
     console.log(`\n🔍 开始扫描 [${platform.toUpperCase()}] 品类：${categoryLabel}，预算：$${totalBudget.toLocaleString()}`);
     console.log(`📋 关键词列表：${keywords.join(', ')}\n`);
@@ -101,39 +108,41 @@ export class SpotterScanner {
     for (const keyword of keywords) {
       console.log(`\n── ${keyword} ──`);
 
-      // Step 1: TikTok Discovery
+      // Step 1: TikTok Discovery — 获取全部视频，不做客户端过滤
       this.emit({ keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'running' });
-      let signals: TikTokSignal[];
+      let allVideos: TikTokSignal[];
       try {
-        signals = await this.tiktok.fetchSignals(keyword, input.filter);
+        allVideos = await this.tiktok.fetchAllSignals(keyword, publishTimeDays);
       } catch (err) {
         this.emit({ keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'error', message: String(err) });
         continue;
       }
 
-      if (signals.length === 0) {
-        this.emit({ keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'skipped', message: '无符合条件的视频' });
+      if (allVideos.length === 0) {
+        this.emit({ keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'skipped', message: '无搜索结果' });
         continue;
       }
-      const topSignalRaw = signals.sort((a, b) => b.momentumMultiplier - a.momentumMultiplier)[0];
+
+      // 按爆发倍数排序，取最优视频用于展示
+      const sorted = [...allVideos].sort((a, b) => b.momentumMultiplier - a.momentumMultiplier);
+      const topSignal = sorted[0];
+      topSignal.keyword = keyword;
+
       this.emit({
         keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'done',
-        message: `${signals.length} 条信号`,
+        message: `${allVideos.length} 条视频（未过滤，全部交给 AI 判定）`,
         tiktokDetail: {
-          videoId: topSignalRaw.videoId,
-          playCount: topSignalRaw.playCount,
-          diggCount: topSignalRaw.diggCount,
-          engagementRate: topSignalRaw.engagementRate,
-          momentumMultiplier: topSignalRaw.momentumMultiplier,
-          authorFollowers: topSignalRaw.authorFollowers,
-          publishedAt: topSignalRaw.publishedAt,
-          videoUrl: topSignalRaw.videoUrl,
-          coverUrl: topSignalRaw.coverUrl,
+          videoId: topSignal.videoId,
+          playCount: topSignal.playCount,
+          diggCount: topSignal.diggCount,
+          engagementRate: topSignal.engagementRate,
+          momentumMultiplier: topSignal.momentumMultiplier,
+          authorFollowers: topSignal.authorFollowers,
+          publishedAt: topSignal.publishedAt,
+          videoUrl: topSignal.videoUrl,
+          coverUrl: topSignal.coverUrl,
         },
       });
-
-      const topSignal = topSignalRaw;
-      topSignal.keyword = keyword;
 
       // Step 2: Amazon Validation
       this.emit({ keyword, step: 2, stepName: 'Amazon 竞争验证', status: 'running' });
@@ -163,45 +172,82 @@ export class SpotterScanner {
         },
       });
 
-      // Step 3: Score & Financial
-      this.emit({ keyword, step: 3, stepName: 'SR 评分 & 资金适配', status: 'running' });
-      const score = calcSpotterRank(topSignal, amazonMetrics);
+      // 先计算资金（AI prompt 需要用到）
       const financial = calcFinancialProfile(totalBudget, amazonMetrics.topProducts, categoryLabel);
-      this.emit({
-        keyword, step: 3, stepName: 'SR 评分 & 资金适配', status: 'done',
-        message: `SR=${score.sr.toFixed(3)}  风险=${financial.capitalRiskFlag ? '⚠️极高' : '✅可控'}`,
-        financial: {
-          totalBudget: financial.totalBudget,
-          procurementBudget: financial.procurementBudget,
-          marketingBudget: financial.marketingBudget,
-          reserveBudget: financial.reserveBudget,
-          suggestedOrderQty: financial.suggestedOrderQty,
-          capitalRiskFlag: financial.capitalRiskFlag,
-          capitalRiskReason: financial.capitalRiskReason,
-        },
-      });
 
-      const product: StandardProduct = {
+      // Step 3: AI 需求判定 + 决策卡片（守门人）
+      this.emit({ keyword, step: 3, stepName: 'AI 需求判定', status: 'running' });
+
+      // 临时构建 product 用于传给 AI（score 暂用占位值）
+      const tempProduct: StandardProduct = {
         id: `${keyword.replace(/\s+/g, '_')}_${Date.now()}`,
         keyword,
         category: categoryLabel,
         tiktok: topSignal,
         amazon: amazonMetrics,
         financial,
-        score,
-        recommendation: getRecommendation(score.sr),
+        score: { sr: 0, momentumComponent: 0, saturationComponent: 0, opportunityComponent: 0 },
+        recommendation: getRecommendation(0),
       };
 
-      // Step 4: AI Insight
-      this.emit({ keyword, step: 4, stepName: '决策卡片', status: 'running' });
+      let aiInsight;
       try {
-        product.aiInsight = await this.insight.generateInsight(product);
-        this.emit({ keyword, step: 4, stepName: '决策卡片', status: 'done' });
+        aiInsight = await this.insight.generateInsight(tempProduct, allVideos);
+        const demandIcon = aiInsight.hasDemand ? '✓ 有商品需求' : '✗ 无明显商品需求';
+        this.emit({ keyword, step: 3, stepName: 'AI 需求判定', status: 'done', message: demandIcon });
       } catch (err) {
-        this.emit({ keyword, step: 4, stepName: '决策卡片', status: 'error', message: String(err) });
+        this.emit({ keyword, step: 3, stepName: 'AI 需求判定', status: 'error', message: String(err) });
+        // AI 失败时仍然继续，按有需求处理
+        aiInsight = undefined;
       }
 
-      results.push(product);
+      // Step 4: SR 评分 & 资金适配
+      const hasDemand = aiInsight?.hasDemand ?? true; // AI 失败时默认有需求
+
+      if (hasDemand) {
+        this.emit({ keyword, step: 4, stepName: 'SR 评分 & 资金适配', status: 'running' });
+        const score = calcSpotterRank(topSignal, amazonMetrics);
+        this.emit({
+          keyword, step: 4, stepName: 'SR 评分 & 资金适配', status: 'done',
+          message: `SR=${score.sr.toFixed(3)}  风险=${financial.capitalRiskFlag ? '⚠️极高' : '✅可控'}`,
+          financial: {
+            totalBudget: financial.totalBudget,
+            procurementBudget: financial.procurementBudget,
+            marketingBudget: financial.marketingBudget,
+            reserveBudget: financial.reserveBudget,
+            suggestedOrderQty: financial.suggestedOrderQty,
+            capitalRiskFlag: financial.capitalRiskFlag,
+            capitalRiskReason: financial.capitalRiskReason,
+          },
+        });
+
+        const product: StandardProduct = {
+          ...tempProduct,
+          score,
+          recommendation: getRecommendation(score.sr),
+          aiInsight,
+        };
+        results.push(product);
+      } else {
+        // AI 判定无需求 → 跳过 SR 评分
+        this.emit({
+          keyword, step: 4, stepName: 'SR 评分 & 资金适配', status: 'skipped',
+          message: `AI 判定无商品需求：${aiInsight?.demandReason ?? ''}`,
+        });
+
+        const product: StandardProduct = {
+          ...tempProduct,
+          score: { sr: 0, momentumComponent: 0, saturationComponent: 0, opportunityComponent: 0 },
+          recommendation: {
+            level: 'avoid',
+            label: '不建议入场',
+            title: '无商品需求信号',
+            reason: aiInsight?.demandReason ?? 'TikTok 内容未反映真实商品购买需求',
+          },
+          aiInsight,
+        };
+        results.push(product);
+      }
     }
 
     return results.sort((a, b) => b.score.sr - a.score.sr);

@@ -139,62 +139,19 @@ if (落地成本 × 300 > 采购预算) → 标记「资金风险极高」
 
 ---
 
-## 3. TikTok 信号过滤
+## 3. TikTok 信号抓取
 
 **文件**：`src/adapters/TikHubAdapter.ts`
 
-### 当前版本：v1（初始版本，2026-04-17）
+### 当前版本：v6（2026-04-17）
 
-#### 默认过滤条件
+#### 核心变化（v6）
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| maxAuthorFollowers | 100,000 | 排除大号，聚焦自然流量爆发 |
-| minPlayCount | 100,000 | 过滤无效低流量视频 |
-| minEngagementRate | 3%（0.03） | 互动率低说明流量非自然爆发 |
-| publishTimeDays | 7 天 | 只看近期爆发信号，过时信号无参考价值 |
-| requireCommercialSignal | true | 要求视频含商业意图信号词，过滤生活/娱乐类内容 |
+**取消客户端商业意图过滤，改由 AI 判定需求。**
 
-#### 商业意图双重过滤逻辑（requireCommercialSignal）
+原因：规则过滤（关键词匹配 + 商业信号词）存在结构性矛盾——越是早期自然传播的商品信号越容易被误杀，而 Spotter 的目标恰恰是捕捉早期信号。
 
-单纯检查商业词不够，因为 `#shop`、`#link`、`#ad` 等词在生活类视频中也普遍存在。过滤逻辑分三步：
-
-```
-1. 若视频无文案且无标签 → 放行（无法判断，给机会）
-2. 关键词必须出现在文案或标签中 → 不符合则过滤
-3. 同时需包含商业信号词 → 不符合则过滤
-```
-
-步骤 2 是关键：真正的商品视频会在文案/标签里提及商品词，而借势蹭热度的生活类视频不会。
-
-**关键词匹配规则（v4 修复）**：使用完整短语匹配，而非拆词匹配。
-- 搜索 "tea cup" → 要求文案/标签包含 "tea cup" 或 "teacup"
-- 拆词匹配（旧逻辑）的问题："tea cup" 拆成 ["tea","cup"]，任意一词出现即通过，导致卖奶茶的视频因含 "tea" 而混入
-
-#### 商业意图信号词表及入选原因
-
-信号词要满足：**在商品内容中高频出现，在纯生活/娱乐内容中低频出现**。
-
-| 信号词 | 为什么可以作为信号词 | 被排除的相似词及原因 |
-|--------|-------------------|------------------|
-| `review` | 专门评测商品的行为，生活类视频极少使用 | — |
-| `haul` | 购物战利品展示，100% 商品内容 | — |
-| `unboxing` | 拆箱开箱，必然是商品 | `unbox` 单词偶尔出现在非商品语境 |
-| `tiktokshop` | TikTok 官方购物平台标签，平台层面确认商业 | `shop` 太泛：#shop 被大量生活类创作者用于涨流量 |
-| `shopwithme` | "陪我购物"系列，固定购物内容格式 | — |
-| `amazonfinds` / `amazonhaul` | 明确指向 Amazon 商品的专属标签 | `amazon` 单词可能出现在"amazon jungle"等无关语境 |
-| `tryon` / `tryonhaul` | 试穿/试用系列，直接展示商品上身效果 | — |
-| `sponsored` | 付费商业合作，平台要求标注 | `ad` 太泛：很多视频无关广告也带 #ad |
-| `affiliate` | 联盟营销链接，必然关联商品销售 | — |
-| `honest review` / `product review` | 明确的评测声明，强商业意图 | — |
-| `recommend` | 主动向观众推荐，高购买转化意图 | — |
-| `must have` / `worth it` | 购买价值判断语，典型的选品内容话术 | — |
-| `amazon find` / `amazon product` | 明确指向 Amazon 商品发现 | — |
-
-**被故意排除的高风险词**：`shop`、`buy`、`link`、`deal`、`sale`、`ad`、`code`、`discount`——这些词虽然看起来商业，但在 TikTok 上被普遍滥用于生活类内容。
-
-#### 所有条件均可在页面上覆盖
-用户在前端输入框填写即覆盖默认值，不填则使用默认值。requireCommercialSignal 在页面以勾选框形式展示，默认勾选。
+新流程：TikHub 返回的全部 20 条视频不做内容过滤，全部传给 AI（InsightEngine），由 AI 综合判断是否存在真实商品购买需求。
 
 #### TikHub API 接口
 ```
@@ -202,50 +159,72 @@ GET /api/v1/tiktok/app/v3/fetch_video_search_result
 参数：keyword, count=20, publish_time=7, sort_type=0（最新发布）, region=US
 ```
 
+#### 两种获取方式
+
+| 方法 | 说明 |
+|------|------|
+| `fetchAllSignals(keyword, publishTimeDays)` | **主流程使用**。返回全部视频，不做客户端过滤，交给 AI 判定 |
+| `fetchSignals(keyword, filter)` | 兼容方法。仍应用基础质量过滤（粉丝数、播放量、互动率、时间窗口），但不再有商业意图过滤 |
+
+#### 基础质量过滤条件（仅 fetchSignals 使用）
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| maxAuthorFollowers | 100,000 | 排除大号，聚焦自然流量爆发 |
+| minPlayCount | 100,000 | 过滤无效低流量视频 |
+| minEngagementRate | 3%（0.03） | 互动率低说明流量非自然爆发 |
+| publishTimeDays | 7 天 | 只看近期爆发信号，过时信号无参考价值 |
+
 #### 返回字段
 | 字段 | 说明 |
 |------|------|
 | videoUrl | TikTok 视频分享链接（share_url） |
 | coverUrl | 视频封面图（有效期约 24 小时，仅用于展示） |
-| videoDesc | 视频文案（desc），创作者描述，用于 AI 提炼爆发功能点 |
-| hashtags | 视频标签列表（text_extra[].hashtag_name），用于 AI 提炼爆发功能点 |
+| videoDesc | 视频文案（desc），创作者描述，传给 AI 判定需求 |
+| hashtags | 视频标签列表（text_extra[].hashtag_name），传给 AI 判定需求 |
 
 ---
 
-## 4. 爆发功能点识别
+## 4. AI 需求判定 + 决策卡片
 
 **文件**：`src/ai/InsightEngine.ts`
 
-### 当前版本：v1（2026-04-17）
+### 当前版本：v2（2026-04-17）
 
-#### 背景
+#### 背景与核心变化
 
-TikTok 爆发的往往不是品类本身，而是某个具体的功能角度（如杯子因「自动搅拌」爆发，而非「杯子」这个品类）。原有 AI 卡片无法回答"为什么爆"。
+v1：AI 是流程最后一步，只做"锦上添花"，输入仅 1 条最优视频。
+v2：AI 提前到第三步，作为"守门人"，输入全部 20 条 TikTok 视频 + Amazon 数据，综合判断是否存在真实商品需求。
 
-#### 信号来源（方案 A + B）
+#### 信号来源
 
-| 来源 | 字段 | 说明 |
+| 来源 | 内容 | 说明 |
 |------|------|------|
-| TikTok 视频文案 | `videoDesc`（API: `desc`） | 创作者直接描述卖点，信号最强 |
-| TikTok 视频标签 | `hashtags`（API: `text_extra[].hashtag_name`） | 标签常包含功能词，如 `#selfstirringcup` |
-| Amazon 竞品标题 | `topProducts[0..4].title` | 卖家经过优化的标题，功能词在前 |
+| TikTok 全部视频（最多 20 条） | 播放量、点赞、互动率、粉丝数、发布时间、文案、标签 | 不经过滤，AI 自行判断哪些是商品内容 |
+| Amazon Top5 竞品 | 标题、价格、评分、评论数 | 交叉验证市场是否存在 |
+| 资金数据 | 预算、采购量、风险标记 | 用于生成行动建议 |
 
-#### AI 提炼逻辑
+#### AI 输出字段
 
-将以上三类信号拼入 prompt，要求 DeepSeek-V3 输出：
-```
-viralFeature：一句话，50字以内，说明该产品为什么会在 TikTok 爆发，核心是哪个功能或卖点触发了传播
-```
+| 字段 | 说明 |
+|------|------|
+| `hasDemand` | 布尔值：TikTok 视频是否反映真实商品购买需求 |
+| `demandReason` | 需求判定理由，50 字以内 |
+| `viralFeature` | 爆发功能点，50 字以内 |
+| `differentiationStrategy` | 差异化策略，100 字以内 |
+| `keyRisks` | 3 条风险标签 |
+| `actionPlan` | 行动建议，150 字以内 |
+| `summary` | 一句话总结，50 字以内 |
 
-#### 输出字段
+#### 流程影响
 
-| 字段 | 位置 | 说明 |
-|------|------|------|
-| `aiInsight.viralFeature` | 结果卡片·AI决策卡片·爆发功能点 | AI 综合三路信号推断的爆发原因，一句话 |
+- `hasDemand = true` → 继续执行 SR 评分 & 资金适配
+- `hasDemand = false` → 跳过 SR 评分，直接标记为"不建议入场·无商品需求信号"，reason 使用 AI 的 demandReason
+- AI 调用失败 → 默认按有需求处理，继续后续流程
 
 #### 降级处理
-- 若 TikHub 未返回 `desc` 或 `text_extra`，则只使用 Amazon 竞品标题推断
-- 若 AI 未输出该字段，页面不展示爆发功能点模块（不影响其他内容）
+- 若 AI 未输出 `hasDemand`，默认为 `false`
+- 若 AI 输出解析失败，返回 `hasDemand=false, demandReason="AI 输出解析失败"`
 
 ---
 
@@ -301,6 +280,7 @@ GET https://serpapi.com/search.json
 | v3 | 2026-04-17 | TikTok信号 | 修复商业过滤无效问题：改为双重检查（关键词存在 + 商业信号词），收窄信号词表避免 #shop/#link 泛化词误判 |
 | v4 | 2026-04-17 | TikTok信号 | 修复关键词拆词误匹配：改为完整短语匹配，"tea cup" 不再因含 "tea" 而匹配奶茶视频 |
 | v5 | 2026-04-17 | TikTok信号 | 搜索排序由 sort_type=1（热度）改为 sort_type=0（最新）；原因：热度排序导致老病毒视频霸占结果，新兴商品信号无法进入，与捕捉早期趋势的目标相悖 |
+| v6 | 2026-04-17 | TikTok信号 / AI判定 | 架构重构：取消客户端商业意图过滤，全部 20 条视频不过滤交给 AI；AI 从第 4 步提前到第 3 步作为"守门人"，综合 TikTok + Amazon 数据判断是否存在真实商品购买需求；hasDemand=false 时跳过 SR 评分 |
 | v1 | 2026-04-17 | SR推荐等级 | 新增 4 档推荐等级：strong/consider/caution/avoid，阈值 0.75/0.55/0.35 |
 | v2 | 2026-04-17 | TikTok信号 | 新增 videoUrl（视频链接）、coverUrl（封面图）字段 |
 | v2 | 2026-04-17 | Amazon验证 | 新增 imageUrl（商品图）、productUrl（amazon.com/dp/ASIN）字段 |
