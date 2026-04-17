@@ -163,6 +163,16 @@ export class SpotterScanner {
         coverUrl: v.coverUrl,
       });
 
+      if (filteredVideos.length === 0) {
+        this.emit({
+          keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'skipped',
+          message: `${allVideos.length} 条视频均不符合过滤条件，建议放宽过滤参数（如降低最低播放量或互动率）`,
+          tiktokAllVideos: sorted.map(toDetail),
+          tiktokFilteredCount: 0,
+        });
+        continue;
+      }
+
       const filterMsg = filteredVideos.length < allVideos.length
         ? `${allVideos.length} 条视频（过滤后 ${filteredVideos.length} 条）`
         : `${allVideos.length} 条视频`;
@@ -170,7 +180,7 @@ export class SpotterScanner {
       this.emit({
         keyword, step: 1, stepName: 'TikTok 信号抓取', status: 'done',
         message: filterMsg,
-        tiktokDetail: toDetail(topSignal),
+        tiktokDetail: toDetail(filteredVideos.sort((a, b) => b.momentumMultiplier - a.momentumMultiplier)[0] ?? topSignal),
         tiktokAllVideos: sorted.map(toDetail),
         tiktokFilteredCount: filteredVideos.length,
       });
@@ -206,8 +216,8 @@ export class SpotterScanner {
       // 先计算资金（AI prompt 需要用到）
       const financial = calcFinancialProfile(totalBudget, amazonMetrics.topProducts, categoryLabel);
 
-      // 传给 AI 的视频：过滤后有结果则用过滤后，否则回退到全部
-      const videosForAI = filteredVideos.length > 0 ? filteredVideos : allVideos;
+      // 过滤后的视频传给 AI（过滤后 0 条已在上方 continue 跳过）
+      const videosForAI = filteredVideos;
 
       // Step 3: 需求判定 + 决策卡片（守门人）
       this.emit({ keyword, step: 3, stepName: '需求判定', status: 'running' });
