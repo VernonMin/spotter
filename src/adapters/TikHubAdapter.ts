@@ -102,42 +102,6 @@ export class TikHubAdapter {
     };
   }
 
-  // 商业意图信号词：使用具体词组，避免 #shop / #link 等泛化词误判
-  private static readonly COMMERCIAL_SIGNALS = [
-    'review', 'haul', 'unboxing',
-    'tiktokshop', 'shopwithme', 'amazonfinds', 'amazonhaul',
-    'tryon', 'tryonhaul', 'try on haul',
-    'sponsored', 'affiliate',
-    'honest review', 'product review',
-    'recommend', 'must have', 'worth it',
-    'amazon find', 'amazon product',
-  ];
-
-  /**
-   * 商业意图双重检查：
-   * 1. 若无文案/标签数据 → 放行（无法判断，给机会）
-   * 2. 关键词必须出现在文案或标签中（排除借势蹭流量的生活类视频）
-   * 3. 同时需含商业信号词（确认是商品内容而非泛泛提及）
-   */
-  private hasCommercialSignal(signal: TikTokSignal, keyword: string): boolean {
-    const text = [
-      signal.videoDesc ?? '',
-      ...(signal.hashtags ?? []),
-    ].join(' ').toLowerCase();
-
-    // 无文案数据，无法判断，放行
-    if (!text.trim()) return true;
-
-    // 关键词匹配：优先完整短语，避免 "tea cup" 被 "milk tea" 误匹配
-    const kwLower = keyword.toLowerCase();
-    const kwNoSpace = kwLower.replace(/\s+/g, ''); // "tea cup" → "teacup"
-    const hasKeyword = text.includes(kwLower) || text.includes(kwNoSpace);
-    if (!hasKeyword) return false;
-
-    // 关键词存在的前提下，还需要商业信号词
-    return TikHubAdapter.COMMERCIAL_SIGNALS.some(s => text.includes(s));
-  }
-
   private applyFilters(signal: TikTokSignal, f: FilterConfig): boolean {
     const cutoff = Date.now() - f.publishTimeDays * 24 * 60 * 60 * 1000;
     const publishedRecently = new Date(signal.publishedAt).getTime() >= cutoff;
