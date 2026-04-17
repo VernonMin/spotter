@@ -169,8 +169,8 @@ GET /api/v1/tiktok/app/v3/fetch_video_search_result
 |------|--------|------|
 | maxAuthorFollowers | 100,000 | 排除大号，聚焦自然流量爆发 |
 | minPlayCount | 100,000 | 过滤无效低流量视频 |
-| minEngagementRate | 3%（0.03） | 互动率低说明流量非自然爆发 |
-| publishTimeDays | 7 天 | 只看近期爆发信号，过时信号无参考价值 |
+| minEngagementRate | 2%（0.02） | 互动率低说明流量非自然爆发 |
+| publishTimeDays | 15 天 | 只看近期爆发信号，过时信号无参考价值 |
 
 用户可在页面侧边栏调整以上参数。页面始终展示全部搜索视频，过滤仅影响 AI 分析的输入范围。
 
@@ -219,7 +219,7 @@ v3：AI 逐条标记哪些视频有商品需求（demandVideoIndices），用 AI
 
 #### 流程影响
 
-- `demandVideoIndices` 非空 → `hasDemand = true`，用标记的最优视频（最高爆发倍数）进行 SR 评分
+- `demandVideoIndices` 非空 → `hasDemand = true`，每条商品需求视频独立进行 SR 评分，各自生成一个选品结果
 - `demandVideoIndices` 为空 → `hasDemand = false`，跳过 SR 评分，标记为"不建议入场·无商品需求信号"
 - AI 调用失败 → 默认按有需求处理，继续后续流程
 
@@ -289,3 +289,5 @@ GET https://serpapi.com/search.json
 | v1 | 2026-04-17 | 页面交互 | TikTok 步骤展示全部搜索视频列表；各步骤详情区域支持点击折叠/展开 |
 | v3 | 2026-04-17 | AI判定 | AI 逐条标记商品需求视频（demandVideoIndices），SR 评分使用 AI 标记的最优视频而非纯爆发倍数排序；结果卡片展示所有商品需求视频 |
 | v7 | 2026-04-17 | TikTok信号 | 重新接入基础质量过滤：先抓全部视频 → 应用过滤条件（粉丝数/播放量/互动率/时间窗口） → 过滤后视频传给 AI；过滤后为空则回退到全部视频；页面展示全部视频但进度提示过滤后数量 |
+| v7 | 2026-04-17 | TikTok信号 | 默认值调整：最低互动率 3% → 2%，时间窗口 7 天 → 15 天 |
+| v4 | 2026-04-17 | AI判定/SR评分 | 多商品需求视频独立评分：AI 标记的每条商品视频各自计算 SR 分并生成独立选品结果，不再只取最优一条 |

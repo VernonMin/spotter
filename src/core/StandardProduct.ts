@@ -108,8 +108,8 @@ export interface FilterConfig {
 export const DEFAULT_FILTER: FilterConfig = {
   maxAuthorFollowers: 100_000,
   minPlayCount: 100_000,
-  minEngagementRate: 0.03,
-  publishTimeDays: 7,
+  minEngagementRate: 0.02,
+  publishTimeDays: 15,
 };
 
 export type SocialPlatform = 'tiktok'; // 后续扩展：'instagram' | 'youtube' | 'xiaohongshu'

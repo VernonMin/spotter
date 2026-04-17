@@ -266,11 +266,19 @@ export class SpotterScanner {
       const hasDemand = aiInsight?.hasDemand ?? true; // AI 失败时默认有需求
 
       if (hasDemand) {
+        // 每条商品需求视频独立评分
+        const videosToScore = demandVideos.length > 0 ? demandVideos : [topSignal];
         this.emit({ keyword, step: 4, stepName: 'SR 评分 & 资金适配', status: 'running' });
-        const score = calcSpotterRank(bestSignal, amazonMetrics);
+
+        const srScores = videosToScore.map(v => {
+          v.keyword = keyword;
+          return { video: v, score: calcSpotterRank(v, amazonMetrics) };
+        });
+
+        const bestSr = srScores.reduce((a, b) => a.score.sr > b.score.sr ? a : b);
         this.emit({
           keyword, step: 4, stepName: 'SR 评分 & 资金适配', status: 'done',
-          message: `SR=${score.sr.toFixed(3)}  风险=${financial.capitalRiskFlag ? '⚠️极高' : '✅可控'}`,
+          message: `${videosToScore.length} 条视频评分，最高 SR=${bestSr.score.sr.toFixed(3)}  风险=${financial.capitalRiskFlag ? '⚠️极高' : '✅可控'}`,
           financial: {
             totalBudget: financial.totalBudget,
             procurementBudget: financial.procurementBudget,
@@ -282,15 +290,18 @@ export class SpotterScanner {
           },
         });
 
-        const product: StandardProduct = {
-          ...tempProduct,
-          tiktok: bestSignal,
-          tiktokDemandVideos: demandVideos.length > 0 ? demandVideos : undefined,
-          score,
-          recommendation: getRecommendation(score.sr),
-          aiInsight,
-        };
-        results.push(product);
+        for (const { video, score } of srScores) {
+          const product: StandardProduct = {
+            ...tempProduct,
+            id: `${keyword.replace(/\s+/g, '_')}_${video.videoId}_${Date.now()}`,
+            tiktok: video,
+            tiktokDemandVideos: demandVideos.length > 0 ? demandVideos : undefined,
+            score,
+            recommendation: getRecommendation(score.sr),
+            aiInsight,
+          };
+          results.push(product);
+        }
       } else {
         // AI 判定无需求 → 跳过 SR 评分
         this.emit({
